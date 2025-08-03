@@ -41,9 +41,9 @@ model Session {
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
-  user User @relation(fields: [user_id], references: [id])
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id, device_hash])
+  @@unique([user_id, device_hash])
 }
 
 model TokenVerification {
@@ -55,7 +55,7 @@ model TokenVerification {
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
 
-  user User @relation(fields: [user_id], references: [id])
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([token])
 }
