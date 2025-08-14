@@ -9,8 +9,19 @@ dotenv.config();
 const app = express();
 
 app.use(
-  cors({ origin: process.env.FRONTEND_PUBLIC_BASE_URL, credentials: true })
+  cors({
+    origin: (origin, callback) => {
+      const allowedOrigins = [process.env.FRONTEND_PUBLIC_BASE_URL];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
 );
+
 app.use(express.json());
 app.use(cookieParser());
 

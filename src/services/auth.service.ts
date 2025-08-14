@@ -103,7 +103,10 @@ export default class AuthService {
     if (existingToken.expires_at < now) {
       await TokenRepository.markTokenExpiredByToken(token);
       throw new AppError("Invalid Link, Token has expired", 400, [
-        { field: "token_has_expired", message: "token_has_expired" },
+        {
+          field: "token_has_expired",
+          message: "token_has_expired",
+        },
       ]);
     }
 
@@ -112,7 +115,9 @@ export default class AuthService {
     } catch (innerError) {
       if (innerError instanceof TokenExpiredError) {
         await TokenRepository.markTokenExpiredByToken(token);
-        throw new AppError("Token has expired (JWT Expired)", 400);
+        throw new AppError("Token has expired (JWT Expired)", 400, [
+          { field: "token_has_expired", message: "token_has_expired" },
+        ]);
       } else if (innerError instanceof JsonWebTokenError) {
         throw new AppError("Invalid Token (JWT Broken)", 400);
       } else {
@@ -232,7 +237,7 @@ export default class AuthService {
       deviceHash: deviceInfo.deviceHash,
     };
 
-    const accessToken = signAccessToken(JwtPayload, "15m");
+    const accessToken = signAccessToken(JwtPayload, "1m");
     const refreshToken = signRefreshToken(JwtPayload, "7d");
 
     await SessionRepository.updateRefreshTokenById(session.id, refreshToken);
@@ -298,7 +303,7 @@ export default class AuthService {
         sessionId: updateSession.id,
         deviceHash: userSession.device_hash,
       },
-      "15m"
+      "1m"
     );
 
     return { newAccessToken };

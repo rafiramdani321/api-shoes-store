@@ -5,7 +5,7 @@ export class AppError extends Error {
   constructor(
     message: string,
     statusCode = 500,
-    details?: { field: string; message: string }[]
+    details?: { field: string; message: string; options?: string }[]
   ) {
     super(message);
     this.statusCode = statusCode;

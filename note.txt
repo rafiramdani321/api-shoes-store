@@ -1,0 +1,2 @@
+DB service = https://console.neon.tech/app/projects/hidden-sea-99656121/branches/br-square-recipe-a1nj016p/tables?database=neondb
+image service = uploadthing

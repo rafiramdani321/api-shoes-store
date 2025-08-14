@@ -9,7 +9,6 @@ import {
   resendTokenVerifyLogger,
 } from "../libs/logger/auth.logger";
 import { generateDeviceHash } from "../utils/generateDeviceHash";
-import { UserRefreshTokenProps } from "../types/auth.type";
 
 export default class AuthController {
   static async register(req: Request, res: Response) {
