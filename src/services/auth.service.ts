@@ -4,10 +4,9 @@ import { AppError } from "../utils/errors";
 import {
   loginValidation,
   registerValidation,
-  validationResponses,
 } from "../validations/auth.validation";
 import RoleService from "./role.service";
-import { Role } from "../constants/roles";
+import { Role } from "../constants";
 import UserRepository from "../repositories/user.repository";
 import {
   signAccessToken,
@@ -26,6 +25,7 @@ import {
   UserRefreshTokenProps,
   VerifyAccessTokenProps,
 } from "../types/auth.type";
+import { validationResponses } from "../validations/index.validation";
 
 export default class AuthService {
   static async registerUser(data: createUserProps) {
@@ -55,9 +55,13 @@ export default class AuthService {
 
     const hashPassword = await bcrypt.hash(data.password, 10);
 
-    const role = await RoleService.getRoleByName(Role.CUSTOMER);
+    let role;
+    role = await RoleService.getRoleByName(Role.CUSTOMER);
     if (!role) {
-      throw new AppError("Role not found", 404);
+      role = await RoleService.addRole(Role.CUSTOMER);
+      if (!role) {
+        throw new AppError("Add role failed", 400);
+      }
     }
 
     const newUserData = await UserRepository.createUser({
@@ -237,7 +241,7 @@ export default class AuthService {
       deviceHash: deviceInfo.deviceHash,
     };
 
-    const accessToken = signAccessToken(JwtPayload, "1m");
+    const accessToken = signAccessToken(JwtPayload, "15m");
     const refreshToken = signRefreshToken(JwtPayload, "7d");
 
     await SessionRepository.updateRefreshTokenById(session.id, refreshToken);
@@ -303,7 +307,7 @@ export default class AuthService {
         sessionId: updateSession.id,
         deviceHash: userSession.device_hash,
       },
-      "1m"
+      "15m"
     );
 
     return { newAccessToken };

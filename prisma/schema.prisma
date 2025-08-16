@@ -79,13 +79,15 @@ model Role {
 model Permission {
   id             String           @id @default(uuid())
   name           String           @unique
+  description    String?
+  module         String?
   created_at     DateTime         @default(now())
   updated_at     DateTime         @updatedAt
   RolePermission RolePermission[]
 }
 
 model RolePermission {
-  id            String   @id @default(ulid())
+  id            String   @id @default(uuid())
   role_id       String
   permission_id String
   created_at    DateTime @default(now())
@@ -95,4 +97,79 @@ model RolePermission {
   permission Permission @relation(fields: [permission_id], references: [id])
 
   @@unique([role_id, permission_id])
+}
+
+model Size {
+  id          String        @id @default(uuid())
+  size        String        @unique
+  created_by  String
+  updated_by  String?
+  ProductSize ProductSize[]
+}
+
+model Category {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  slug       String   @unique
+  created_by String
+  updated_by String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  SubCategory SubCategory[]
+  Product     Product[]
+}
+
+model SubCategory {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  category_id String
+  created_by  String
+  updated_by  String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  category Category  @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  Product  Product[]
+}
+
+model ProductSize {
+  id         String @id @default(uuid())
+  product_id String
+  size_id    String
+  stock      Int
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  size    Size    @relation(fields: [size_id], references: [id])
+
+  @@unique([product_id, size_id])
+}
+
+model ProductImage {
+  id         String @id @default(uuid())
+  product_id String
+  url        String
+
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id             String   @id @default(uuid())
+  title          String
+  slug           String   @unique
+  description    String
+  price          Int
+  is_active      Boolean
+  category_id    String
+  subcategory_id String
+  created_by     String
+  updated_by     String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  category     Category       @relation(fields: [category_id], references: [id], onDelete: Restrict)
+  sub_category SubCategory    @relation(fields: [subcategory_id], references: [id], onDelete: Restrict)
+  ProductSize  ProductSize[]
+  ProductImage ProductImage[]
 }

@@ -6,3 +6,6 @@ export const resendTokenVerifyLogger = createRotatingLogger(
   "resend-email-verify-token"
 );
 export const loginLogger = createRotatingLogger("login");
+export const createCategoryLogger = createRotatingLogger("create-category");
+export const updateCategoryLogger = createRotatingLogger("update-category");
+export const deleteCategoryLogger = createRotatingLogger("delete-category");

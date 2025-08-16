@@ -5,7 +5,8 @@ export const registerValidation = z
     username: z
       .string()
       .nonempty("Username is required.")
-      .min(4, "Username must be at least 4 characters."),
+      .min(4, "Username must be at least 4 characters.")
+      .max(20, "Username is too long, max 15 characters"),
     email: z
       .string()
       .nonempty("Email is required.")
@@ -29,13 +30,3 @@ export const loginValidation = z.object({
   email: z.string().nonempty("Email is required."),
   password: z.string().nonempty("Password is required."),
 });
-
-export const validationResponses = (errors: any) => {
-  const errorValidation = errors.error.issues.map(
-    (issue: { path: string; message: string }) => ({
-      field: String(issue.path[0]),
-      message: issue.message,
-    })
-  );
-  return errorValidation;
-};
