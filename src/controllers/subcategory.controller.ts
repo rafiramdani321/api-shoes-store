@@ -1,26 +1,34 @@
 import { Request, Response } from "express";
-import { getClientInfo } from "../utils/getClientInfo";
+import SubCategoriesService from "../services/subcategory.service";
 import { errorResponse, successResponse } from "../utils/responses";
-import CategoryService from "../services/category.service";
-import {
-  createCategoryLogger,
-  deleteCategoryLogger,
-  deleteManyCategoryLogger,
-  updateCategoryLogger,
-} from "../libs/logger/index.logger";
 import { AppError } from "../utils/errors";
-import { CategoryCreate, CategoryUpdate } from "../types/category.type";
+import { getClientInfo } from "../utils/getClientInfo";
+import {
+  SubCategoryCreate,
+  SubCategoryUpdate,
+} from "../types/sub-category.type";
+import {
+  createSubCategoryLogger,
+  deleteManySubcategoryLogger,
+  deleteSubCategoryLogger,
+  updateSubcategoryLogger,
+} from "../libs/logger/index.logger";
 
-export default class CategoryController {
+export default class SubCategoriesController {
   static async getCategories(req: Request, res: Response) {
     try {
-      const response = await CategoryService.getCategories(req.query);
-      return successResponse(res, "Fetching categories success", 200, response);
+      const response = await SubCategoriesService.getSubCategories(req.query);
+      return successResponse(
+        res,
+        "Fetching sub categories success",
+        200,
+        response
+      );
     } catch (error) {
       const isKnownError = error instanceof AppError;
       return errorResponse(
         res,
-        isKnownError ? error.message : "Internal server error.",
+        isKnownError ? error.message : "Internal server error",
         isKnownError ? error.statusCode : 500,
         isKnownError ? error.details : undefined
       );
@@ -30,10 +38,10 @@ export default class CategoryController {
   static async getCategoryById(req: Request, res: Response) {
     const { id } = req.params;
     try {
-      const response = await CategoryService.getCategoryById(id);
+      const response = await SubCategoriesService.getSubCategoryById(id);
       return successResponse(
         res,
-        "Fetcing category by id success",
+        "Fetching sub category by id success",
         200,
         response
       );
@@ -41,39 +49,42 @@ export default class CategoryController {
       const isKnownError = error instanceof AppError;
       return errorResponse(
         res,
-        isKnownError ? error.message : "Internal server error.",
+        isKnownError ? error.message : "Internal server error",
         isKnownError ? error.statusCode : 500,
         isKnownError ? error.details : undefined
       );
     }
   }
 
-  static async addCategory(req: Request, res: Response) {
+  static async addSubCategory(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const data = await req.body;
     const user = req.user;
+
     try {
-      const newData: CategoryCreate = {
+      const newData: SubCategoryCreate = {
         name: data.name,
         slug: data.slug,
+        category_id: data.category_id,
         created_by: req.user?.email!,
       };
-      await CategoryService.addCategory(newData);
 
-      createCategoryLogger.info({
-        event: "create_category_success",
+      await SubCategoriesService.createSubCategory(newData);
+
+      createSubCategoryLogger.info({
+        event: "create_subcategory_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Create new category success", 201);
+      return successResponse(res, "Create new sub category success", 201);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      createCategoryLogger.error({
-        event: "create_category_failed",
+      createSubCategoryLogger.error({
+        event: "create_subcategory_failed",
         email: data?.email || "unknown",
         message: error.message,
         ip,
@@ -90,34 +101,36 @@ export default class CategoryController {
     }
   }
 
-  static async updateCategory(req: Request, res: Response) {
+  static async updateSubCategory(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const data = req.body;
     const { id } = req.params;
+
     try {
-      const newData: CategoryUpdate = {
-        id: id,
+      const newData: SubCategoryUpdate = {
+        id,
         name: data.name,
         slug: data.slug,
+        category_id: data.category_id,
         updated_by: req.user?.email!,
       };
-      await CategoryService.updateCategory(newData);
 
-      updateCategoryLogger.info({
-        event: "update_category_success",
+      await SubCategoriesService.updateSubCategory(newData);
+      updateSubcategoryLogger.info({
+        event: "update_subcategory_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Update category success", 200);
+      return successResponse(res, "Update sub category succcess", 200);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      updateCategoryLogger.error({
-        event: "update_category_failed",
+      updateSubcategoryLogger.error({
+        event: "update_subcategory_failed",
         email: data?.email || "unknown",
         message: error.message,
         ip,
@@ -134,27 +147,27 @@ export default class CategoryController {
     }
   }
 
-  static async deleteCategory(req: Request, res: Response) {
+  static async deleteSubCategory(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
     try {
-      await CategoryService.deleteCategory(id);
+      await SubCategoriesService.deleteSubCategory(id);
 
-      deleteCategoryLogger.info({
-        event: "delete_category_success",
+      deleteSubCategoryLogger.info({
+        event: "delete_subcategory_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Category deleted success", 200);
+      return successResponse(res, "Sub Category deleted success", 200);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      deleteCategoryLogger.error({
-        event: "update_category_failed",
+      deleteSubCategoryLogger.error({
+        event: "update_subcategory_failed",
         email: user?.email || "unknown",
         message: error.message,
         ip,
@@ -171,26 +184,33 @@ export default class CategoryController {
     }
   }
 
-  static async deleteManyCategories(req: Request, res: Response) {
+  static async deleteManySubCategories(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     try {
-      const response = await CategoryService.deleteManyCategory(req.body.ids);
+      const response = await SubCategoriesService.deleteManySubCategory(
+        req.body.ids
+      );
 
-      deleteManyCategoryLogger.info({
-        event: "delete_categories_success",
+      deleteManySubcategoryLogger.info({
+        event: "delete_many_subcategories_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "deleted categories success", 200, response);
+      return successResponse(
+        res,
+        "deleted sub categories success",
+        200,
+        response
+      );
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      deleteManyCategoryLogger.error({
-        event: "delete_categories_failed",
+      deleteManySubcategoryLogger.error({
+        event: "delete_many_subcategories_failed",
         email: user?.email || "unknown",
         message: error.message,
         ip,

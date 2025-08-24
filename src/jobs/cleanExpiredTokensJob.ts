@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import TokenRepository from "../repositories/token.repository";
-import { cleanTokenLogger } from "../libs/logger/auth.logger";
+import { cleanTokenLogger } from "../libs/logger/index.logger";
 
 cron.schedule("*/10 * * * *", async () => {
   const now = new Date();

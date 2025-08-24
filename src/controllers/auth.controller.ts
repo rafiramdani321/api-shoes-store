@@ -7,7 +7,7 @@ import {
   loginLogger,
   registerLogger,
   resendTokenVerifyLogger,
-} from "../libs/logger/auth.logger";
+} from "../libs/logger/index.logger";
 import { generateDeviceHash } from "../utils/generateDeviceHash";
 
 export default class AuthController {
