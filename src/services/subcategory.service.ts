@@ -10,12 +10,19 @@ import {
 } from "../types/sub-category.type";
 import { AppError } from "../utils/errors";
 import { validationResponses } from "../validations/index.validation";
-import { createOrUpdatesubCategoryValidation } from "../validations/sub-category.validation";
+import { createOrUpdatesubCategoryValidation } from "../validations/validation-schema";
 
 export default class SubCategoriesService {
   static async getSubCategories(query: GetSubCategoriesQueryBase) {
-    const page = Math.max(parseInt(query.page ?? "1"), 1);
-    const limit = Math.max(parseInt(query.limit ?? "10"), 1);
+    const page =
+      query.page && query.page.trim() !== ""
+        ? Math.max(parseInt(query.page), 1)
+        : 1;
+
+    const limit =
+      query.limit && query.limit.trim() !== ""
+        ? Math.max(parseInt(query.limit), 1)
+        : 10;
     const search = query.search?.toString();
 
     const allowedSearchBy: SubCategoriesAllowedSearchBy[] = [
@@ -62,6 +69,9 @@ export default class SubCategoriesService {
     }
 
     const subcategory = await SubCategoryRepository.findSubCategoryById(id);
+    if (!subcategory) {
+      throw new AppError("Sub category not found", 404);
+    }
     return subcategory;
   }
 

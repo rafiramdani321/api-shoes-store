@@ -1,21 +1,21 @@
 import { Request, Response } from "express";
-import { getClientInfo } from "../utils/getClientInfo";
+import SizeService from "../services/size.service";
 import { errorResponse, successResponse } from "../utils/responses";
-import CategoryService from "../services/category.service";
-import {
-  createCategoryLogger,
-  deleteCategoryLogger,
-  deleteManyCategoryLogger,
-  updateCategoryLogger,
-} from "../libs/logger/index.logger";
 import { AppError } from "../utils/errors";
-import { CategoryCreate, CategoryUpdate } from "../types/category.type";
+import { getClientInfo } from "../utils/getClientInfo";
+import { SizeCreateType, SizeUpdateType } from "../types/size.type";
+import {
+  createSizeLogger,
+  deleteManySizeLogger,
+  deleteSizeLogger,
+  updateSizeLogger,
+} from "../libs/logger/index.logger";
 
-export default class CategoryController {
-  static async getCategories(req: Request, res: Response) {
+export default class SizeController {
+  static async getSizes(req: Request, res: Response) {
     try {
-      const response = await CategoryService.getCategories(req.query);
-      return successResponse(res, "Fetching categories success", 200, response);
+      const response = await SizeService.getSizes(req.query);
+      return successResponse(res, "Fetching size success", 200, response);
     } catch (error) {
       const isKnownError = error instanceof AppError;
       return errorResponse(
@@ -27,16 +27,11 @@ export default class CategoryController {
     }
   }
 
-  static async getCategoryById(req: Request, res: Response) {
+  static async getSizeById(req: Request, res: Response) {
     const { id } = req.params;
     try {
-      const response = await CategoryService.getCategoryById(id);
-      return successResponse(
-        res,
-        "Fetcing category by id success",
-        200,
-        response
-      );
+      const response = await SizeService.getSizeById(id);
+      return successResponse(res, "Fetcing size by id success", 200, response);
     } catch (error) {
       const isKnownError = error instanceof AppError;
       return errorResponse(
@@ -48,32 +43,31 @@ export default class CategoryController {
     }
   }
 
-  static async addCategory(req: Request, res: Response) {
+  static async addSize(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const data = await req.body;
     const user = req.user;
     try {
-      const newData: CategoryCreate = {
-        name: data?.name,
-        slug: data?.slug,
-        created_by: req?.user?.email!,
+      const newData: SizeCreateType = {
+        size: data?.size,
+        created_by: req.user?.email!,
       };
-      await CategoryService.addCategory(newData);
+      await SizeService.addSize(newData);
 
-      createCategoryLogger.info({
-        event: "create_category_success",
+      createSizeLogger.info({
+        event: "create_size_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Create new category success", 201);
+      return successResponse(res, "Create new size success", 201);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      createCategoryLogger.error({
-        event: "create_category_failed",
+      createSizeLogger.error({
+        event: "create_size_failed",
         email: data?.email || "unknown",
         message: error.message,
         ip,
@@ -90,34 +84,33 @@ export default class CategoryController {
     }
   }
 
-  static async updateCategory(req: Request, res: Response) {
+  static async updateSize(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const data = req.body;
     const { id } = req.params;
     try {
-      const newData: CategoryUpdate = {
+      const newData: SizeUpdateType = {
         id: id,
-        name: data?.name,
-        slug: data?.slug,
-        updated_by: req?.user?.email!,
+        size: data?.size,
+        updated_by: req.user?.email!,
       };
-      await CategoryService.updateCategory(newData);
+      await SizeService.updateSizeById(newData);
 
-      updateCategoryLogger.info({
-        event: "update_category_success",
+      updateSizeLogger.info({
+        event: "update_size_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Update category success", 200);
+      return successResponse(res, "Update size success", 200);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      updateCategoryLogger.error({
-        event: "update_category_failed",
+      updateSizeLogger.error({
+        event: "update_size_failed",
         email: data?.email || "unknown",
         message: error.message,
         ip,
@@ -134,27 +127,27 @@ export default class CategoryController {
     }
   }
 
-  static async deleteCategory(req: Request, res: Response) {
+  static async deleteSizeById(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
     try {
-      await CategoryService.deleteCategory(id);
+      await SizeService.deleteSizeById(id);
 
-      deleteCategoryLogger.info({
-        event: "delete_category_success",
+      deleteSizeLogger.info({
+        event: "delete_size_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Category deleted success", 200);
+      return successResponse(res, "Size deleted success", 200);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      deleteCategoryLogger.error({
-        event: "delete_category_failed",
+      deleteSizeLogger.error({
+        event: "delete_size_failed",
         email: user?.email || "unknown",
         message: error.message,
         ip,
@@ -171,26 +164,26 @@ export default class CategoryController {
     }
   }
 
-  static async deleteManyCategories(req: Request, res: Response) {
+  static async deleteManySizeByIds(req: Request, res: Response) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     try {
-      const response = await CategoryService.deleteManyCategory(req.body.ids);
+      const response = await SizeService.deleteManySizeByIds(req.body.ids);
 
-      deleteManyCategoryLogger.info({
-        event: "delete_categories_success",
+      deleteManySizeLogger.info({
+        event: "delete_sizes_success",
         email: user?.email,
         ip,
         userAgent,
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "deleted categories success", 200, response);
+      return successResponse(res, "deleted sizes success", 200, response);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
 
-      deleteManyCategoryLogger.error({
-        event: "delete_categories_failed",
+      deleteManySizeLogger.error({
+        event: "delete_sizes_failed",
         email: user?.email || "unknown",
         message: error.message,
         ip,

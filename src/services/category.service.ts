@@ -2,7 +2,6 @@ import slugify from "slugify";
 
 import { AppError } from "../utils/errors";
 import { validationResponses } from "../validations/index.validation";
-import { addOrUpdateCategoryValidation } from "../validations/category.validation";
 import CategoryRepository from "../repositories/category.repository";
 import {
   CategoriesAllowedSearchBy,
@@ -12,11 +11,20 @@ import {
   GetCategoriesQueryBase,
   CategoriesSortOrder,
 } from "../types/category.type";
+import { addOrUpdateCategoryValidation } from "../validations/validation-schema";
 
 export default class CategoryService {
   static async getCategories(query: GetCategoriesQueryBase) {
-    const page = Math.max(parseInt(query.page ?? "1"), 1);
-    const limit = Math.max(parseInt(query.limit ?? "10"), 1);
+    const page =
+      query.page && query.page.trim() !== ""
+        ? Math.max(parseInt(query.page), 1)
+        : 1;
+
+    const limit =
+      query.limit && query.limit.trim() !== ""
+        ? Math.max(parseInt(query.limit), 1)
+        : 10;
+
     const search = query.search?.toString();
 
     const allowedSearchBy: CategoriesAllowedSearchBy[] = ["name", "slug"];
@@ -57,6 +65,9 @@ export default class CategoryService {
     }
 
     const category = await CategoryRepository.findCategoryById(id);
+    if (!category) {
+      throw new AppError("Category not found", 404);
+    }
     return category;
   }
 

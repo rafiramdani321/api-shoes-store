@@ -4,7 +4,7 @@ import { AppError } from "../utils/errors";
 import {
   loginValidation,
   registerValidation,
-} from "../validations/auth.validation";
+} from "../validations/validation-schema";
 import RoleService from "./role.service";
 import { Role } from "../constants";
 import UserRepository from "../repositories/user.repository";

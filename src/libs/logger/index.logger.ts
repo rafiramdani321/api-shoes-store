@@ -23,3 +23,8 @@ export const deleteSubCategoryLogger =
 export const deleteManySubcategoryLogger = createRotatingLogger(
   "delete-many-subcategories"
 );
+
+export const createSizeLogger = createRotatingLogger("create-size");
+export const updateSizeLogger = createRotatingLogger("update-size");
+export const deleteSizeLogger = createRotatingLogger("delete-size");
+export const deleteManySizeLogger = createRotatingLogger("delete-many-size");

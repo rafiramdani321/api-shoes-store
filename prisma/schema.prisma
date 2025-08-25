@@ -102,8 +102,10 @@ model RolePermission {
 model Size {
   id          String        @id @default(uuid())
   size        String        @unique
+  created_at  DateTime      @default(now())
   created_by  String
   updated_by  String?
+  updated_at  DateTime      @updatedAt
   ProductSize ProductSize[]
 }
 

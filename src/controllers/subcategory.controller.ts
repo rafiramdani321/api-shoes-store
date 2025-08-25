@@ -63,10 +63,10 @@ export default class SubCategoriesController {
 
     try {
       const newData: SubCategoryCreate = {
-        name: data.name,
-        slug: data.slug,
-        category_id: data.category_id,
-        created_by: req.user?.email!,
+        name: data?.name,
+        slug: data?.slug,
+        category_id: data?.category_id,
+        created_by: req?.user?.email!,
       };
 
       await SubCategoriesService.createSubCategory(newData);
@@ -110,10 +110,10 @@ export default class SubCategoriesController {
     try {
       const newData: SubCategoryUpdate = {
         id,
-        name: data.name,
-        slug: data.slug,
-        category_id: data.category_id,
-        updated_by: req.user?.email!,
+        name: data?.name,
+        slug: data?.slug,
+        category_id: data?.category_id,
+        updated_by: req?.user?.email!,
       };
 
       await SubCategoriesService.updateSubCategory(newData);
