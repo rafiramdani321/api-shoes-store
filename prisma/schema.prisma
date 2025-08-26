@@ -70,7 +70,9 @@ model Role {
   id         String   @id @default(uuid())
   name       String   @unique
   created_at DateTime @default(now())
+  created_by String?
   updated_at DateTime @updatedAt
+  updated_by String?
 
   User           User[]
   RolePermission RolePermission[]

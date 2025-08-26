@@ -63,3 +63,11 @@ export const createOrUpdateSizeValidation = z.object({
     .min(1, "Size must be at least 1 characters")
     .max(10, "Size is too long, max 10 characters"),
 });
+
+export const createOrUpdateRoleValidation = z.object({
+  name: z
+    .string()
+    .nonempty("Name is required")
+    .min(1, "Name must be at least 2 characters")
+    .max(20, "Name is too long, max 20 characters"),
+});

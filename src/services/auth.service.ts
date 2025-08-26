@@ -58,7 +58,11 @@ export default class AuthService {
     let role;
     role = await RoleService.getRoleByName(Role.CUSTOMER);
     if (!role) {
-      role = await RoleService.addRole(Role.CUSTOMER);
+      const newData = {
+        name: Role.CUSTOMER,
+        created_by: "System",
+      };
+      role = await RoleService.addRole(newData);
       if (!role) {
         throw new AppError("Add role failed", 400);
       }
@@ -144,7 +148,7 @@ export default class AuthService {
       id: user.id,
       email: user.email,
       username: user.username,
-      role: user.role,
+      role: user.role.name,
       tokenVersion: session.token_version,
       sessionId: session.id,
       deviceHash,
@@ -235,7 +239,7 @@ export default class AuthService {
       id: user.id,
       email: user.email,
       username: user.username,
-      role: user.role,
+      role: user.role.name,
       tokenVersion: session.token_version,
       sessionId: session.id,
       deviceHash: deviceInfo.deviceHash,

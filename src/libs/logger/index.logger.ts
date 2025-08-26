@@ -28,3 +28,8 @@ export const createSizeLogger = createRotatingLogger("create-size");
 export const updateSizeLogger = createRotatingLogger("update-size");
 export const deleteSizeLogger = createRotatingLogger("delete-size");
 export const deleteManySizeLogger = createRotatingLogger("delete-many-size");
+
+export const createRoleLogger = createRotatingLogger("create-role");
+export const updateRoleLogger = createRotatingLogger("update-role");
+export const deleteRoleLogger = createRotatingLogger("delete-role");
+export const deleteManyRolesLogger = createRotatingLogger("delete-many-roles");
