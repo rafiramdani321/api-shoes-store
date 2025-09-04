@@ -1,14 +1,27 @@
 import RoleRepository from "../repositories/role.repository";
 import {
+  GetPermissionQueryBase,
+  GetRolePermissionQueryBase,
   GetRolesQueryBase,
+  PermissionAllowedSearchBy,
+  PermissionAllowedSortBy,
+  PermissionSortOrder,
   RoleAllowedSortBy,
   RoleCreateType,
+  RolePermissionAllowedSearchBy,
+  RolePermissionAllowedSortBy,
+  RolePermissionCreateType,
+  RolePermissionSortOrder,
+  RolePermissionUpdateType,
   RoleSortOrder,
   RoleUpdateType,
 } from "../types/role.type";
 import { AppError } from "../utils/errors";
 import { validationResponses } from "../validations/index.validation";
-import { createOrUpdateRoleValidation } from "../validations/validation-schema";
+import {
+  createOrUpdateRolePermission,
+  createOrUpdateRoleValidation,
+} from "../validations/validation-schema";
 
 export default class RoleService {
   static async getRoles(query: GetRolesQueryBase) {
@@ -148,5 +161,185 @@ export default class RoleService {
 
     const deleteRoles = await RoleRepository.deleteRoleManyByIds(ids);
     return deleteRoles;
+  }
+
+  static async getPermissions(query: GetPermissionQueryBase) {
+    const page =
+      query.page && query.page.trim() !== ""
+        ? Math.max(parseInt(query.page), 1)
+        : 1;
+
+    const limit =
+      query.limit && query.limit.trim() !== ""
+        ? Math.max(parseInt(query.limit), 1)
+        : 10;
+
+    const search = query.search?.toString();
+
+    const allowedSearchBy: PermissionAllowedSearchBy[] = ["name", "module"];
+    const searchBy = allowedSearchBy.includes(
+      query.searchBy as PermissionAllowedSearchBy
+    )
+      ? (query.searchBy as PermissionAllowedSearchBy)
+      : undefined;
+
+    const allowedSortBy: PermissionAllowedSortBy[] = [
+      "name",
+      "created_at",
+      "updated_at",
+    ];
+    const sortBy = allowedSortBy.includes(
+      query.sortBy as PermissionAllowedSortBy
+    )
+      ? (query.sortBy as PermissionAllowedSortBy)
+      : undefined;
+
+    const rawOrder = query.sortOrder?.toLocaleLowerCase();
+    const sortOrder: PermissionSortOrder = rawOrder === "asc" ? "asc" : "desc";
+
+    return await RoleRepository.findPermissions(
+      page,
+      limit,
+      searchBy,
+      search,
+      sortBy,
+      sortOrder
+    );
+  }
+
+  static async getRolePermissions(query: GetRolePermissionQueryBase) {
+    const page =
+      query.page && query.page.trim() !== ""
+        ? Math.max(parseInt(query.page), 1)
+        : 1;
+
+    const limit =
+      query.limit && query.limit.trim() !== ""
+        ? Math.max(parseInt(query.limit), 1)
+        : 10;
+
+    const search = query.search?.toString();
+
+    const allowedSearchBy: RolePermissionAllowedSearchBy[] = [
+      "role_name",
+      "permission_name",
+      "permission_module",
+    ];
+    const searchBy = allowedSearchBy.includes(
+      query.searchBy as RolePermissionAllowedSearchBy
+    )
+      ? (query.searchBy as RolePermissionAllowedSearchBy)
+      : undefined;
+
+    const allowedSortBy: RolePermissionAllowedSortBy[] = [
+      "role_name",
+      "permission_name",
+      "permission_module",
+      "created_at",
+      "updated_at",
+    ];
+    const sortBy = allowedSortBy.includes(
+      query.sortBy as RolePermissionAllowedSortBy
+    )
+      ? (query.sortBy as RolePermissionAllowedSortBy)
+      : undefined;
+
+    const rawOrder = query.sortOrder?.toLocaleLowerCase();
+    const sortOrder: RolePermissionSortOrder =
+      rawOrder === "asc" ? "asc" : "desc";
+
+    return await RoleRepository.findRolePermissions(
+      page,
+      limit,
+      searchBy,
+      search,
+      sortBy,
+      sortOrder
+    );
+  }
+
+  static async getRolePermissionById(id: string) {
+    if (!id || id === "") {
+      throw new AppError("Id not found", 404);
+    }
+
+    const rolePermission = await RoleRepository.findRolePermissionById(id);
+    if (!rolePermission) {
+      throw new AppError("Role permission not found", 404);
+    }
+
+    return rolePermission;
+  }
+
+  static async addRolePermission(data: RolePermissionCreateType) {
+    const errorsValidation = createOrUpdateRolePermission.safeParse(data);
+    if (!errorsValidation.success) {
+      const errors = validationResponses(errorsValidation);
+      throw new AppError("Validation failed", 400, errors);
+    }
+
+    const existing =
+      await RoleRepository.findRolePermissionByRoleIdAndPermissionId(
+        data.role_id,
+        data.permission_id
+      );
+    if (existing) {
+      throw new AppError("Role and permission already exists");
+    }
+
+    const newData: RolePermissionCreateType = {
+      role_id: data.role_id,
+      permission_id: data.permission_id,
+    };
+    const createRolePermission = await RoleRepository.addRolePermission(
+      newData
+    );
+    return createRolePermission;
+  }
+
+  static async updateRolePermission(data: RolePermissionUpdateType) {
+    const errorsValidation = createOrUpdateRolePermission.safeParse(data);
+    if (!errorsValidation.success) {
+      const errors = validationResponses(errorsValidation);
+      throw new AppError("Validation failed", 400, errors);
+    }
+
+    const existing =
+      await RoleRepository.findRolePermissionByRoleIdAndPermissionId(
+        data.role_id,
+        data.permission_id
+      );
+    if (existing && existing.id !== data.id) {
+      throw new AppError("Role and permission already exists");
+    }
+
+    const newData: RolePermissionUpdateType = {
+      id: data.id,
+      role_id: data.role_id,
+      permission_id: data.permission_id,
+    };
+
+    return await RoleRepository.updateRolePermission(newData);
+  }
+
+  static async deleteRolePermissionById(id: string) {
+    if (!id || id == "") {
+      throw new AppError("Id not found", 404);
+    }
+
+    const rolePermission = await RoleRepository.findRolePermissionById(id);
+    if (!rolePermission) {
+      throw new AppError("Role permission not found", 404);
+    }
+
+    return await RoleRepository.deleteRolePermission(id);
+  }
+
+  static async deleteManyRolePermissions(ids: string[]) {
+    if (ids.length < 0) {
+      throw new AppError("Data role permissions ids not found", 404);
+    }
+
+    return await RoleRepository.deleteManyRolePermission(ids);
   }
 }

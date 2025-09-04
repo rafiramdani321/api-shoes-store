@@ -33,3 +33,16 @@ export const createRoleLogger = createRotatingLogger("create-role");
 export const updateRoleLogger = createRotatingLogger("update-role");
 export const deleteRoleLogger = createRotatingLogger("delete-role");
 export const deleteManyRolesLogger = createRotatingLogger("delete-many-roles");
+
+export const createRolePermissionLogger = createRotatingLogger(
+  "create-role-permission"
+);
+export const updateRolePermissionLogger = createRotatingLogger(
+  "update-role-permission"
+);
+export const deleteRolePermissionLogger = createRotatingLogger(
+  "delete-role-permission"
+);
+export const deleteManyRolePermissionLogger = createRotatingLogger(
+  "delete-many-role-permission"
+);

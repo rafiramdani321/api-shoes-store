@@ -71,3 +71,8 @@ export const createOrUpdateRoleValidation = z.object({
     .min(1, "Name must be at least 2 characters")
     .max(20, "Name is too long, max 20 characters"),
 });
+
+export const createOrUpdateRolePermission = z.object({
+  role_id: z.string().nonempty(),
+  permission_id: z.string().nonempty(),
+});
