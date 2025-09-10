@@ -46,6 +46,9 @@ export default class CategoryRepository {
         take: limit,
         where,
         orderBy,
+        include: {
+          SubCategory: true,
+        },
       }),
       prisma.category.count({ where }),
     ]);
@@ -62,7 +65,12 @@ export default class CategoryRepository {
   }
 
   static async findCategoryById(id: string) {
-    return prisma.category.findUnique({ where: { id } });
+    return prisma.category.findUnique({
+      where: { id },
+      include: {
+        SubCategory: true,
+      },
+    });
   }
 
   static async findCategoryByName(name: string) {

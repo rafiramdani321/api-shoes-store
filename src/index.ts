@@ -22,8 +22,14 @@ app.use(
   })
 );
 
-app.use(express.json());
 app.use(cookieParser());
+// 🔑 Skip JSON parser untuk multipart
+app.use((req, res, next) => {
+  if (req.is("multipart/form-data")) {
+    return next();
+  }
+  express.json({ limit: "10mb" })(req, res, next);
+});
 
 app.use("/api", routes);
 

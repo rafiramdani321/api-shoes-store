@@ -154,26 +154,27 @@ model ProductImage {
   id         String @id @default(uuid())
   product_id String
   url        String
+  fileId     String
 
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
 }
 
 model Product {
   id             String   @id @default(uuid())
-  title          String
+  title          String   @unique
   slug           String   @unique
   description    String
   price          Int
   is_active      Boolean
   category_id    String
-  subcategory_id String
+  subcategory_id String?
   created_by     String
   updated_by     String?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
   category     Category       @relation(fields: [category_id], references: [id], onDelete: Restrict)
-  sub_category SubCategory    @relation(fields: [subcategory_id], references: [id], onDelete: Restrict)
+  sub_category SubCategory?   @relation(fields: [subcategory_id], references: [id], onDelete: Restrict)
   ProductSize  ProductSize[]
   ProductImage ProductImage[]
 }
