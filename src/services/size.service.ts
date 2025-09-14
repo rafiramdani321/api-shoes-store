@@ -42,6 +42,11 @@ export default class SizeService {
       throw new AppError("Id size required");
     }
 
+    const size = await SizeRepository.findSizeById(id);
+    if (!size) {
+      throw new AppError("Size not found");
+    }
+
     return await SizeRepository.findSizeById(id);
   }
 
@@ -117,12 +122,30 @@ export default class SizeService {
       throw new AppError("Size not found", 404);
     }
 
+    if (size.ProductSize.length > 0) {
+      throw new AppError(
+        "You cannot delete this size, because this size has a product"
+      );
+    }
+
     return await SizeRepository.deleteSizeById(id);
   }
 
   static async deleteManySizeByIds(ids: string[]) {
     if (ids.length < 0) {
       throw new AppError("Data sizes ids not found", 404);
+    }
+
+    const sizes = await SizeRepository.findSizeByIds(ids);
+    if (sizes.length === 0) {
+      throw new AppError("Sizes not found", 404);
+    }
+
+    const hasLinkedProduct = sizes.some((size) => size.ProductSize.length > 0);
+    if (hasLinkedProduct) {
+      throw new AppError(
+        "You cannot delete this size, because there are some sizes that have products"
+      );
     }
 
     return await SizeRepository.deleteManySizeByIds(ids);

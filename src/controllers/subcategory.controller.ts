@@ -167,7 +167,7 @@ export default class SubCategoriesController {
       const isKnownError = error instanceof AppError;
 
       deleteSubCategoryLogger.error({
-        event: "update_subcategory_failed",
+        event: "delete_subcategory_failed",
         email: user?.email || "unknown",
         message: error.message,
         ip,

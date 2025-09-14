@@ -41,7 +41,25 @@ export default class SizeRepository {
   }
 
   static async findSizeById(id: string) {
-    return prisma.size.findUnique({ where: { id } });
+    return prisma.size.findUnique({
+      where: { id },
+      include: {
+        ProductSize: true,
+      },
+    });
+  }
+
+  static async findSizeByIds(ids: string[]) {
+    return prisma.size.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      include: {
+        ProductSize: true,
+      },
+    });
   }
 
   static findSizeBySize(size: string) {

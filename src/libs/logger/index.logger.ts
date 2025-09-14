@@ -46,3 +46,10 @@ export const deleteRolePermissionLogger = createRotatingLogger(
 export const deleteManyRolePermissionLogger = createRotatingLogger(
   "delete-many-role-permission"
 );
+
+export const createProductLogger = createRotatingLogger("create-product");
+export const updateProductLogger = createRotatingLogger("update-product");
+export const deleteProductLogger = createRotatingLogger("delete-product");
+export const deleteManyProductsLogger = createRotatingLogger(
+  "delete-many-product"
+);

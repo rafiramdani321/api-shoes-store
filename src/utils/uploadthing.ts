@@ -25,3 +25,36 @@ export async function uploadFilesToUploadThing(files: Express.Multer.File[]) {
 
   return uploaded;
 }
+
+export async function deleteFilesFromUploadthing(fileIds: string[]) {
+  try {
+    const res = await utapi.deleteFiles(fileIds);
+    if (!res.success) {
+      throw new Error("Failed delete file images");
+    }
+
+    return {
+      success: true,
+      deletedCount: res.deletedCount,
+    };
+  } catch (error) {
+    console.error("Delete Uploadthing error:", error);
+    throw error;
+  }
+}
+
+export async function deleteFileFromUploadthingByFileId(fileId: string) {
+  try {
+    const res = await utapi.deleteFiles(fileId);
+    if (!res.success) {
+      throw new Error("Failed delete file by fileId");
+    }
+    return {
+      success: true,
+      deletedFileId: fileId,
+    };
+  } catch (error) {
+    console.error("Delete Uploadthing by FileId error:", error);
+    throw error;
+  }
+}
