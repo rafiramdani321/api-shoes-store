@@ -28,6 +28,7 @@ model User {
 
   Session           Session[]
   TokenVerification TokenVerification[]
+  Cart              Cart?
 }
 
 model Session {
@@ -147,8 +148,9 @@ model ProductSize {
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
   size    Size    @relation(fields: [size_id], references: [id])
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  CartItem   CartItem[]
 
   @@unique([product_id, size_id])
 }
@@ -183,4 +185,35 @@ model Product {
   sub_category SubCategory?   @relation(fields: [subcategory_id], references: [id], onDelete: Restrict)
   ProductSize  ProductSize[]
   ProductImage ProductImage[]
+  CartItem     CartItem[]
+}
+
+model Cart {
+  id         String   @id @default(uuid())
+  user_id    String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user     User       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  CartItem CartItem[]
+
+  @@unique([user_id])
+}
+
+model CartItem {
+  id              String   @id @default(uuid())
+  cart_id         String
+  product_id      String
+  product_size_id String
+  quantity        Int
+  unit_price      Int
+  total_price     Int
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  cart         Cart        @relation(fields: [cart_id], references: [id], onDelete: Cascade)
+  product      Product     @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  product_size ProductSize @relation(fields: [product_size_id], references: [id], onDelete: Restrict)
+
+  @@unique([cart_id, product_id, product_size_id])
 }

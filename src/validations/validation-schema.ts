@@ -82,12 +82,12 @@ export const createProductValidation = z.object({
     .string()
     .nonempty("Title is required")
     .min(3, "Title must be at least 3 characters")
-    .max(50, "Title is too long."),
+    .max(400, "Title is too long."),
   slug: z
     .string()
     .nonempty("Slug is required")
     .min(3, "Slug must be at least 3 characters")
-    .max(100, "Slug is too long."),
+    .max(500, "Slug is too long."),
   description: z
     .string()
     .nonempty("Description is required")
@@ -118,12 +118,12 @@ export const updateProductValidation = z.object({
     .string()
     .nonempty("Title is required")
     .min(3, "Title must be at least 3 characters")
-    .max(50, "Title is too long."),
+    .max(400, "Title is too long."),
   slug: z
     .string()
     .nonempty("Slug is required")
     .min(3, "Slug must be at least 3 characters")
-    .max(100, "Slug is too long."),
+    .max(500, "Slug is too long."),
   description: z
     .string()
     .nonempty("Description is required")

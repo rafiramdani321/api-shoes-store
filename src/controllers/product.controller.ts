@@ -48,6 +48,27 @@ export default class ProductController {
     }
   }
 
+  static async getProductBySlug(req: Request, res: Response) {
+    const { slug } = req.params;
+    try {
+      const response = await ProductService.getProductBySlug(slug);
+      return successResponse(
+        res,
+        "Fetching product by slug success",
+        200,
+        response
+      );
+    } catch (error) {
+      const isKnownError = error instanceof AppError;
+      return errorResponse(
+        res,
+        isKnownError ? error.message : "Internal server error",
+        isKnownError ? error.statusCode : 500,
+        isKnownError ? error.details : undefined
+      );
+    }
+  }
+
   static async addProduct(req: Request, res: Response) {
     const { userAgent, ip } = getClientInfo(req);
     const files = req.files as Express.Multer.File[];

@@ -153,6 +153,16 @@ export class ProductRepository {
   static async findProductBySlug(slug: string) {
     return prisma.product.findUnique({
       where: { slug },
+      include: {
+        category: true,
+        sub_category: true,
+        ProductImage: true,
+        ProductSize: {
+          include: {
+            size: true,
+          },
+        },
+      },
     });
   }
 
@@ -256,6 +266,15 @@ export class ProductRepository {
     return await prisma.productSize.findUnique({
       where: {
         id,
+      },
+    });
+  }
+
+  static async findSizeProductIdAndProductId(id: string, product_id: string) {
+    return await prisma.productSize.findUnique({
+      where: {
+        id,
+        product_id,
       },
     });
   }

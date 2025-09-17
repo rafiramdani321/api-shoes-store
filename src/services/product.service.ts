@@ -88,6 +88,19 @@ export class ProductService {
     return product;
   }
 
+  static async getProductBySlug(slug: string) {
+    if (!slug || slug === "") {
+      throw new AppError("Slug is required", 404);
+    }
+
+    const product = await ProductRepository.findProductBySlug(slug);
+    if (!product) {
+      throw new AppError("Product not found", 404);
+    }
+
+    return product;
+  }
+
   static async addProduct(data: {
     title: string;
     slug: string;

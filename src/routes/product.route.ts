@@ -8,8 +8,11 @@ import { Permission } from "../constants";
 const routerProduct = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+// Public routes
 routerProduct.get("/", ProductController.getProducts);
+routerProduct.get("/slug/:slug", ProductController.getProductBySlug);
 
+// Product images
 routerProduct.post(
   "/images",
   verifyAccessToken,
@@ -17,6 +20,7 @@ routerProduct.post(
   upload.array("images"),
   ProductController.addProductImage
 );
+
 routerProduct.delete(
   "/images/:id",
   verifyAccessToken,
@@ -24,6 +28,7 @@ routerProduct.delete(
   ProductController.deleteProductImageById
 );
 
+// Product sizes
 routerProduct.post(
   "/product-sizes",
   verifyAccessToken,
@@ -45,7 +50,17 @@ routerProduct.delete(
   ProductController.deleteSizeProductById
 );
 
+// Bulk delete
+routerProduct.delete(
+  "/delete-many",
+  verifyAccessToken,
+  checkPermission([Permission.DELETE_PRODUCT]),
+  ProductController.deleteManyProduct
+);
+
+// CRUD Product by ID
 routerProduct.get("/:id", ProductController.getProductById);
+
 routerProduct.post(
   "/",
   verifyAccessToken,
@@ -53,18 +68,14 @@ routerProduct.post(
   upload.array("images"),
   ProductController.addProduct
 );
+
 routerProduct.put(
   "/:id",
   verifyAccessToken,
   checkPermission([Permission.UPDATE_PRODUCT]),
   ProductController.updateProductById
 );
-routerProduct.delete(
-  "/delete-many",
-  verifyAccessToken,
-  checkPermission([Permission.DELETE_PRODUCT]),
-  ProductController.deleteManyProduct
-);
+
 routerProduct.delete(
   "/:id",
   verifyAccessToken,
