@@ -24,7 +24,6 @@ export default class CartController {
       );
     }
   }
-
   static async addCart(req: Request, res: Response) {
     const user = req.user;
     const body = req.body;
@@ -36,6 +35,22 @@ export default class CartController {
 
       await CartService.addCart(payload);
       return successResponse(res, "Add cart success", 201);
+    } catch (error: any) {
+      const isKnownError = error instanceof AppError;
+      return errorResponse(
+        res,
+        isKnownError ? error.message : "Internal server error.",
+        isKnownError ? error.statusCode : 500,
+        isKnownError ? error.details : undefined
+      );
+    }
+  }
+
+  static async deleteCartItemById(req: Request, res: Response) {
+    const { id } = req.params;
+    try {
+      await CartService.deleteCartItemById(id);
+      return successResponse(res, "delete cart item success", 200);
     } catch (error: any) {
       const isKnownError = error instanceof AppError;
       return errorResponse(

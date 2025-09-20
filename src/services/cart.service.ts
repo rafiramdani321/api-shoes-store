@@ -18,6 +18,19 @@ export default class CartService {
     return await CartRepository.findCartsByUserId(user.id);
   }
 
+  static async getCartItemById(id: string) {
+    if (!id || id === "") {
+      throw new AppError("Id cart item required.", 404);
+    }
+
+    const cartItem = await CartRepository.findCartItemById(id);
+    if (!cartItem) {
+      throw new AppError("Cart item not found.", 404);
+    }
+
+    return cartItem;
+  }
+
   static async addCart(data: CreateCartType) {
     if (!data.user_id || data.user_id === "") {
       throw new AppError("id user required", 404);
@@ -76,5 +89,10 @@ export default class CartService {
     };
 
     return await CartRepository.createCartItem(newData);
+  }
+
+  static async deleteCartItemById(id: string) {
+    const cartItem_id = await this.getCartItemById(id);
+    return await CartRepository.deleteCartItemById(cartItem_id.id);
   }
 }

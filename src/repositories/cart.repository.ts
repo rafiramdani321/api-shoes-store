@@ -8,8 +8,18 @@ export default class CartRepository {
       include: {
         CartItem: {
           include: {
-            product: true,
-            product_size: true,
+            product: {
+              include: {
+                category: true,
+                sub_category: true,
+                ProductImage: true,
+              },
+            },
+            product_size: {
+              include: {
+                size: true,
+              },
+            },
           },
         },
       },
@@ -40,6 +50,10 @@ export default class CartRepository {
     });
   }
 
+  static async findCartItemById(id: string) {
+    return await prisma.cartItem.findUnique({ where: { id } });
+  }
+
   static async createCartItem(data: CreateCartType) {
     return await prisma.cartItem.create({
       data: {
@@ -51,5 +65,9 @@ export default class CartRepository {
         total_price: data.total_price,
       },
     });
+  }
+
+  static async deleteCartItemById(id: string) {
+    return await prisma.cartItem.delete({ where: { id } });
   }
 }
