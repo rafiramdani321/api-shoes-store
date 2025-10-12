@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { prisma } from "../libs/prisma";
 import {
   CreateProductImageType,
@@ -6,6 +5,7 @@ import {
   createSizeProductType,
   ProductsAllowedSearchBy,
   ProductsAllowedSortBy,
+  ProductsAllowedSortByProductBySlug,
   ProductsSortOrder,
   UpdateProductType,
   updateSizeProductType,
@@ -22,83 +22,262 @@ export class ProductRepository {
   ) {
     const skip = (page - 1) * limit;
 
-    let where: Prisma.ProductWhereInput = {};
+    if (!search) {
+      const [data, total] = await Promise.all([
+        prisma.product.findMany({
+          skip,
+          take: limit,
+          orderBy: sortBy
+            ? sortBy === "category"
+              ? { category: { name: sortOrder } }
+              : sortBy === "sub_category"
+              ? { sub_category: { name: sortOrder } }
+              : { [sortBy]: sortOrder }
+            : { created_at: "desc" },
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+            sub_category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+            ProductImage: true,
+            ProductSize: {
+              select: {
+                id: true,
+                size: {
+                  select: {
+                    id: true,
+                    size: true,
+                    created_at: true,
+                    created_by: true,
+                    updated_at: true,
+                    updated_by: true,
+                  },
+                },
+                product_id: true,
+              },
+            },
+          },
+        }),
+        prisma.product.count(),
+      ]);
+
+      return {
+        data,
+        meta: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
+    let whereClause = "";
+    if (searchBy === "title") {
+      whereClause = `lower(p.title) % lower($1)`;
+    } else if (searchBy === "slug") {
+      whereClause = `lower(p.slug) % lower($1)`;
+    } else if (searchBy === "category") {
+      whereClause = `lower(c.name) % lower($1) OR lower(c.slug) % lower($1)`;
+    } else if (searchBy === "sub_category") {
+      whereClause = `lower(sc.name) % lower($1) OR lower(sc.slug) % lower($1)`;
+    } else {
+      whereClause = `
+      lower(p.title) % lower($1)
+      OR lower(p.slug) % lower($1)
+      OR lower(c.name) % lower($1)
+      OR lower(c.slug) % lower($1)
+      OR lower(sc.name) % lower($1)
+      OR lower(sc.slug) % lower($1)
+    `;
+    }
+
+    const sortColumnMap: Record<ProductsAllowedSortBy, string> = {
+      title: "p.title",
+      slug: "p.slug",
+      price: "p.price",
+      category: "c.name",
+      sub_category: "sc.name",
+      created_at: "p.created_at",
+      updated_at: "p.updated_at",
+    };
+
+    const sortColumn = sortBy ? sortColumnMap[sortBy] : "p.created_at";
+    const sortDirection = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+    const orderByClause = sortBy
+      ? `${sortColumn} ${sortDirection}, similarity(lower(p.title), lower($1)) DESC`
+      : `similarity(lower(p.title), lower($1)) DESC`;
+
+    const data = await prisma.$queryRawUnsafe<any[]>(
+      `
+        SELECT 
+          p.*,
+          jsonb_build_object(
+            'id', c.id,
+            'name', c.name,
+            'slug', c.slug
+          ) as category,
+          jsonb_build_object(
+            'id', sc.id,
+            'name', sc.name,
+            'slug', sc.slug
+          ) as sub_category,
+          COALESCE(
+            json_agg(DISTINCT pi) FILTER (WHERE pi.id IS NOT NULL), '[]'
+          ) as "ProductImage",
+          COALESCE(
+            json_agg(DISTINCT jsonb_build_object(
+              'id', ps.id,
+              'product_id', ps.product_id,
+              'size', s
+            )) FILTER (WHERE ps.id IS NOT NULL), '[]'
+          ) as "ProductSize"
+        FROM "Product" p
+        LEFT JOIN "Category" c ON p.category_id = c.id
+        LEFT JOIN "SubCategory" sc ON p.subcategory_id = sc.id
+        LEFT JOIN "ProductImage" pi ON pi.product_id = p.id
+        LEFT JOIN "ProductSize" ps ON ps.product_id = p.id
+        LEFT JOIN "Size" s ON ps.size_id = s.id
+        WHERE ${whereClause}
+        GROUP BY p.id, c.id, sc.id
+        ORDER BY ${orderByClause}
+        LIMIT $2 OFFSET $3
+      `,
+      search,
+      limit,
+      skip
+    );
+
+    const totalResult = await prisma.$queryRawUnsafe<any[]>(
+      `
+    SELECT COUNT(*)::int as count
+    FROM "Product" p
+    LEFT JOIN "Category" c ON p.category_id = c.id
+    LEFT JOIN "SubCategory" sc ON p.subcategory_id = sc.id
+    WHERE ${whereClause}
+    `,
+      search
+    );
+
+    const total = totalResult[0]?.count ?? 0;
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  static async findProductsByCategorySlug(
+    category_slug: string,
+    page: number,
+    limit: number,
+    search?: string,
+    sortBy: ProductsAllowedSortByProductBySlug = "created_at",
+    sortOrder: ProductsSortOrder = "desc",
+    minPrice?: number,
+    maxPrice?: number,
+    sizes?: string[]
+  ) {
+    const skip = (page - 1) * limit;
+
+    let searchIds: string[] | undefined = undefined;
 
     if (search) {
-      if (searchBy) {
-        if (searchBy === "category") {
-          where = {
-            category: {
-              name: { contains: search, mode: Prisma.QueryMode.insensitive },
-            },
-          };
-        } else if (searchBy === "sub_category") {
-          where = {
-            sub_category: {
-              name: { contains: search, mode: Prisma.QueryMode.insensitive },
-            },
-          };
-        } else {
-          where = {
-            OR: [
-              {
-                title: { contains: search, mode: Prisma.QueryMode.insensitive },
-              },
-              {
-                slug: { contains: search, mode: Prisma.QueryMode.insensitive },
-              },
-              {
-                category: {
-                  name: {
-                    contains: search,
-                    mode: Prisma.QueryMode.insensitive,
-                  },
-                },
-              },
-              {
-                sub_category: {
-                  name: {
-                    contains: search,
-                    mode: Prisma.QueryMode.insensitive,
-                  },
-                },
-              },
-            ],
-          };
-        }
+      const rawResults = await prisma.$queryRawUnsafe<{ id: string }[]>(
+        `
+         SELECT p.id
+         FROM "Product" p
+         JOIN "Category" c ON p.category_id = c.id
+         LEFT JOIN "SubCategory" sc ON p.subcategory_id = sc.id
+         WHERE
+           c.slug = $2
+           AND (
+             p.title ILIKE '%' || $1 || '%'
+             OR p.slug ILIKE '%' || $1 || '%'
+             OR c.slug ILIKE '%' || $1 || '%'
+             OR sc.slug ILIKE '%' || $1 || '%'
+             OR similarity(p.title, $1) > 0.2
+             OR similarity(p.slug, $1) > 0.2
+             OR similarity(c.slug, $1) > 0.2
+             OR similarity(sc.slug, $1) > 0.2
+           )
+         ORDER BY
+           (
+            similarity(p.title, $1) + 
+            similarity(p.slug, $1) +
+            similarity(c.slug, $1) +
+            similarity(sc.slug, $1)
+           ) DESC
+         LIMIT 1000
+        `,
+        search,
+        category_slug
+      );
+
+      searchIds = rawResults.map((r) => r.id);
+      if (searchIds.length === 0) {
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+          },
+        };
       }
     }
 
-    let orderBy: Prisma.ProductOrderByWithRelationInput;
+    const where: any = {
+      category: { slug: category_slug },
+    };
 
-    if (sortBy === "category") {
-      orderBy = {
-        category: { name: sortOrder },
+    if (sizes && sizes.length > 0) {
+      where.ProductSize = {
+        some: { size_id: { in: sizes } },
       };
-    } else if (sortBy === "sub_category") {
-      orderBy = {
-        sub_category: { name: sortOrder },
-      };
-    } else if (sortBy) {
-      orderBy = {
-        [sortBy]: sortOrder,
-      };
-    } else {
-      orderBy = { created_at: "desc" };
+    }
+
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = minPrice;
+      if (maxPrice) where.price.lte = maxPrice;
+    }
+
+    if (searchIds) {
+      where.id = { in: searchIds };
     }
 
     const [data, total] = await Promise.all([
       prisma.product.findMany({
+        where,
+        orderBy: { [sortBy]: sortOrder },
         skip,
         take: limit,
-        where,
-        orderBy,
         include: {
           category: true,
           sub_category: true,
           ProductImage: true,
           ProductSize: {
-            include: {
+            select: {
+              id: true,
+              product_id: true,
               size: true,
             },
           },
@@ -117,6 +296,8 @@ export class ProductRepository {
       },
     };
   }
+
+  static async findProductsBySubCategorySlug() {}
 
   static async findProductById(id: string) {
     return prisma.product.findUnique({

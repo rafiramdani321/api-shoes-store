@@ -1,13 +1,8 @@
-DB service = https://console.neon.tech/app/projects/hidden-sea-99656121/branches/br-square-recipe-a1nj016p/tables?database=neondb
-image service = uploadthing
+-- This is an empty migration.
 
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-// DEPLOY DB
-ubah .env
-npx prisma migrate deploy
-
-
-// SETUP Index Trigram findProducts
+-- Title & Slug (langsung di Product)
 CREATE INDEX IF NOT EXISTS idx_product_title_trgm 
   ON "Product" USING gin (lower(title) gin_trgm_ops);
 

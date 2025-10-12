@@ -5,8 +5,10 @@ import {
   CreateProductType,
   createSizeProductType,
   GetProductQueryBase,
+  GetProductsByCategorySlugQUery,
   ProductsAllowedSearchBy,
   ProductsAllowedSortBy,
+  ProductsAllowedSortByProductBySlug,
   ProductsSortOrder,
   UpdateProductType,
   updateSizeProductType,
@@ -73,6 +75,49 @@ export class ProductService {
       search,
       sortBy,
       sortOrder
+    );
+  }
+
+  static async getProductsByCategorySlug(
+    query: GetProductsByCategorySlugQUery
+  ) {
+    const page =
+      query.page && query.page.trim() !== ""
+        ? Math.max(parseInt(query.page), 1)
+        : 1;
+    const limit =
+      query.limit && query.limit.trim() !== ""
+        ? Math.max(parseInt(query.limit), 1)
+        : 10;
+    const search = query.search?.toString();
+
+    const allowedSortBy: ProductsAllowedSortByProductBySlug[] = [
+      "created_at",
+      "price",
+    ];
+    const sortBy = allowedSortBy.includes(
+      query.sortBy as ProductsAllowedSortByProductBySlug
+    )
+      ? (query.sortBy as ProductsAllowedSortByProductBySlug)
+      : undefined;
+
+    const rawOrder = query.sortOrder?.toLocaleLowerCase();
+    const sortOrder: ProductsSortOrder = rawOrder === "asc" ? "asc" : "desc";
+    const minPrice = query.minPrice ? parseInt(query.minPrice) : undefined;
+    const maxPrice = query.maxPrice ? parseInt(query.maxPrice) : undefined;
+    const sizes =
+      query.sizes && query.sizes.length > 0 ? query.sizes : undefined;
+
+    return await ProductRepository.findProductsByCategorySlug(
+      query.category_slug,
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+      minPrice,
+      maxPrice,
+      sizes
     );
   }
 

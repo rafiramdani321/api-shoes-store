@@ -78,3 +78,16 @@ export interface updateSizeProductType {
   size_id: string;
   stock: number;
 }
+
+export type ProductsAllowedSortByProductBySlug = "created_at" | "price";
+export interface GetProductsByCategorySlugQUery {
+  category_slug: string;
+  page: string;
+  limit: string;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  sizes?: string[];
+}
