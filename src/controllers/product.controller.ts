@@ -59,6 +59,48 @@ export default class ProductController {
         response
       );
     } catch (error) {
+      const isKnownError = error instanceof AppError;
+      return errorResponse(
+        res,
+        isKnownError ? error.message : "internal server error",
+        isKnownError ? error.statusCode : 500,
+        isKnownError ? error.details : undefined
+      );
+    }
+  }
+
+  static async getProductsBySubCategorySlug(req: Request, res: Response) {
+    try {
+      let sizes: string[] | undefined = undefined;
+
+      if (req.query.sizes) {
+        sizes = Array.isArray(req.query.sizes)
+          ? req.query.sizes.map((s) => String(s))
+          : [String(req.query.sizes)];
+      }
+
+      const query = {
+        category_slug: String(req.query.category_slug),
+        subcategory_slug: String(req.query.subcategory_slug),
+        page: String(req.query.page),
+        limit: String(req.query.limit),
+        search: req.query.search ? String(req.query.search) : undefined,
+        sortBy: req.query.sortBy ? String(req.query.sortBy) : undefined,
+        sortOrder: req.query.sortOrder
+          ? String(req.query.sortOrder)
+          : undefined,
+        minPrice: req.query.minPrice ? String(req.query.minPrice) : undefined,
+        maxPrice: req.query.maxPrice ? String(req.query.maxPrice) : undefined,
+        sizes,
+      };
+      const response = await ProductService.getProductsBySubCategorySlug(query);
+      return successResponse(
+        res,
+        "Fetching products by sub category success",
+        200,
+        response
+      );
+    } catch (error) {
       console.log(error);
       const isKnownError = error instanceof AppError;
       return errorResponse(

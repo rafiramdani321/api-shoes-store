@@ -6,9 +6,10 @@ import {
   createSizeProductType,
   GetProductQueryBase,
   GetProductsByCategorySlugQUery,
+  GetProductsBySubCategorySlugQuery,
   ProductsAllowedSearchBy,
   ProductsAllowedSortBy,
-  ProductsAllowedSortByProductBySlug,
+  ProductsAllowedSortByCategorySlugAndSubCategorySlug,
   ProductsSortOrder,
   UpdateProductType,
   updateSizeProductType,
@@ -91,14 +92,12 @@ export class ProductService {
         : 10;
     const search = query.search?.toString();
 
-    const allowedSortBy: ProductsAllowedSortByProductBySlug[] = [
-      "created_at",
-      "price",
-    ];
+    const allowedSortBy: ProductsAllowedSortByCategorySlugAndSubCategorySlug[] =
+      ["created_at", "price"];
     const sortBy = allowedSortBy.includes(
-      query.sortBy as ProductsAllowedSortByProductBySlug
+      query.sortBy as ProductsAllowedSortByCategorySlugAndSubCategorySlug
     )
-      ? (query.sortBy as ProductsAllowedSortByProductBySlug)
+      ? (query.sortBy as ProductsAllowedSortByCategorySlugAndSubCategorySlug)
       : undefined;
 
     const rawOrder = query.sortOrder?.toLocaleLowerCase();
@@ -110,6 +109,48 @@ export class ProductService {
 
     return await ProductRepository.findProductsByCategorySlug(
       query.category_slug,
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+      minPrice,
+      maxPrice,
+      sizes
+    );
+  }
+
+  static async getProductsBySubCategorySlug(
+    query: GetProductsBySubCategorySlugQuery
+  ) {
+    const page =
+      query.page && query.page.trim() !== ""
+        ? Math.max(parseInt(query.page), 1)
+        : 1;
+    const limit =
+      query.limit && query.limit.trim() !== ""
+        ? Math.max(parseInt(query.limit), 1)
+        : 10;
+    const search = query.search?.toString();
+
+    const allowedSortBy: ProductsAllowedSortByCategorySlugAndSubCategorySlug[] =
+      ["created_at", "price"];
+    const sortBy = allowedSortBy.includes(
+      query.sortBy as ProductsAllowedSortByCategorySlugAndSubCategorySlug
+    )
+      ? (query.sortBy as ProductsAllowedSortByCategorySlugAndSubCategorySlug)
+      : undefined;
+
+    const rawOrder = query.sortOrder?.toLocaleLowerCase();
+    const sortOrder: ProductsSortOrder = rawOrder === "asc" ? "asc" : "desc";
+    const minPrice = query.minPrice ? parseInt(query.minPrice) : undefined;
+    const maxPrice = query.maxPrice ? parseInt(query.maxPrice) : undefined;
+    const sizes =
+      query.sizes && query.sizes.length > 0 ? query.sizes : undefined;
+
+    return await ProductRepository.findProductsBySubCategorySlug(
+      query.category_slug,
+      query.subcategory_slug,
       page,
       limit,
       search,

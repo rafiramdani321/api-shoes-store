@@ -11,6 +11,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Public routes
 routerProduct.get("/", ProductController.getProducts);
 routerProduct.get("/category", ProductController.getProductsByCategorySlug);
+routerProduct.get(
+  "/sub-category",
+  ProductController.getProductsBySubCategorySlug
+);
 routerProduct.get("/slug/:slug", ProductController.getProductBySlug);
 
 // Product images

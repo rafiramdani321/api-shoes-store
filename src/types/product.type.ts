@@ -79,9 +79,11 @@ export interface updateSizeProductType {
   stock: number;
 }
 
-export type ProductsAllowedSortByProductBySlug = "created_at" | "price";
-export interface GetProductsByCategorySlugQUery {
-  category_slug: string;
+export type ProductsAllowedSortByCategorySlugAndSubCategorySlug =
+  | "created_at"
+  | "price";
+
+export interface GetProductsBaseQueryCategoryAndSubCategory {
   page: string;
   limit: string;
   search?: string;
@@ -90,4 +92,15 @@ export interface GetProductsByCategorySlugQUery {
   minPrice?: string;
   maxPrice?: string;
   sizes?: string[];
+}
+
+export interface GetProductsByCategorySlugQUery
+  extends GetProductsBaseQueryCategoryAndSubCategory {
+  category_slug: string;
+}
+
+export interface GetProductsBySubCategorySlugQuery
+  extends GetProductsBaseQueryCategoryAndSubCategory {
+  category_slug: string;
+  subcategory_slug: string;
 }

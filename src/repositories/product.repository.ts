@@ -5,7 +5,7 @@ import {
   createSizeProductType,
   ProductsAllowedSearchBy,
   ProductsAllowedSortBy,
-  ProductsAllowedSortByProductBySlug,
+  ProductsAllowedSortByCategorySlugAndSubCategorySlug,
   ProductsSortOrder,
   UpdateProductType,
   updateSizeProductType,
@@ -188,7 +188,7 @@ export class ProductRepository {
     page: number,
     limit: number,
     search?: string,
-    sortBy: ProductsAllowedSortByProductBySlug = "created_at",
+    sortBy: ProductsAllowedSortByCategorySlugAndSubCategorySlug = "created_at",
     sortOrder: ProductsSortOrder = "desc",
     minPrice?: number,
     maxPrice?: number,
@@ -297,7 +297,122 @@ export class ProductRepository {
     };
   }
 
-  static async findProductsBySubCategorySlug() {}
+  static async findProductsBySubCategorySlug(
+    category_slug: string,
+    subcategory_slug: string,
+    page: number,
+    limit: number,
+    search?: string,
+    sortBy: ProductsAllowedSortByCategorySlugAndSubCategorySlug = "created_at",
+    sortOrder: ProductsSortOrder = "desc",
+    minPrice?: number,
+    maxPrice?: number,
+    sizes?: string[]
+  ) {
+    const skip = (page - 1) * limit;
+
+    let searchIds: string[] | undefined = undefined;
+
+    if (search) {
+      const rawResults = await prisma.$queryRawUnsafe<{ id: string }[]>(
+        `SELECT p.id
+        FROM "Product" p
+        JOIN "Category" c ON p.category_id = c.id
+        LEFT JOIN "SubCategory" sc ON p.subcategory_id = sc.id
+        WHERE
+          c.slug = $2
+          AND sc.slug = $3
+          AND (
+            p.title ILIKE '%' || $1 || '%'
+            OR p.slug ILIKE '%' || $1 || '%'
+            OR c.slug ILIKE '%' || $1 || '%'
+            OR sc.slug ILIKE '%' || $1 || '%'
+            OR similarity(p.title, $1) > 0.2
+            OR similarity(p.slug, $1) > 0.2
+            OR similarity(c.slug, $1) > 0.2
+            OR similarity(sc.slug, $1) > 0.2
+          )
+        ORDER BY
+          (
+            similarity(p.title, $1) +
+            similarity(p.slug, $1) +
+            similarity(c.slug, $1) +
+            similarity(sc.slug, $1)
+          ) DESC
+        LIMIT 1000
+        `,
+        search,
+        category_slug,
+        subcategory_slug
+      );
+
+      searchIds = rawResults.map((r) => r.id);
+      if (searchIds.length === 0) {
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+          },
+        };
+      }
+    }
+
+    const where: any = {
+      category: { slug: category_slug },
+      sub_category: { slug: subcategory_slug },
+    };
+
+    if (sizes && sizes.length > 0) {
+      where.ProductSize = {
+        some: { size_id: { in: sizes } },
+      };
+    }
+
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = minPrice;
+      if (maxPrice) where.price.lte = maxPrice;
+    }
+
+    if (searchIds) {
+      where.id = { in: searchIds };
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+        include: {
+          category: true,
+          sub_category: true,
+          ProductImage: true,
+          ProductSize: {
+            select: {
+              id: true,
+              product_id: true,
+              size: true,
+            },
+          },
+        },
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 
   static async findProductById(id: string) {
     return prisma.product.findUnique({
