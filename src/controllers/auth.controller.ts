@@ -178,6 +178,39 @@ export default class AuthController {
     }
   }
 
+  static async loginWithGoogle(req: Request, res: Response) {
+    const { token } = req.body;
+    const { ip, userAgent } = getClientInfo(req);
+    const deviceHash = generateDeviceHash(ip, userAgent);
+    try {
+      const response = await AuthService.loginWithGoogle(token, {
+        ip,
+        userAgent,
+        deviceHash,
+      });
+
+      res.cookie("refreshToken", response.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      return successResponse(res, "Google login success", 200, {
+        username: response.username,
+        email: response.email,
+        accessToken: response.accessToken,
+      });
+    } catch (error: any) {
+      const isKnownError = error instanceof AppError;
+      return errorResponse(
+        res,
+        isKnownError ? error.message : "Internal server error",
+        isKnownError ? error.statusCode : 500
+      );
+    }
+  }
+
   static async logout(req: Request, res: Response) {
     try {
       const userData = req.user;

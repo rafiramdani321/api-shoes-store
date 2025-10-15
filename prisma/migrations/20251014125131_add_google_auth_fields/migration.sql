@@ -1,0 +1,12 @@
+/*
+  Warnings:
+
+  - A unique constraint covering the columns `[google_id]` on the table `User` will be added. If there are existing duplicate values, this will fail.
+
+*/
+-- AlterTable
+ALTER TABLE "public"."User" ADD COLUMN     "auth_provider" TEXT NOT NULL DEFAULT 'local',
+ADD COLUMN     "google_id" TEXT;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_google_id_key" ON "public"."User"("google_id");

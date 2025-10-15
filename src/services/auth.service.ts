@@ -1,4 +1,6 @@
 import bcrypt from "bcrypt";
+import { OAuth2Client } from "google-auth-library";
+
 import { createUserProps } from "../types/user.type";
 import { AppError } from "../utils/errors";
 import {
@@ -26,6 +28,7 @@ import {
   VerifyAccessTokenProps,
 } from "../types/auth.type";
 import { validationResponses } from "../validations/index.validation";
+import { verifyGoogleAccessToken } from "../utils/verifyGoogleAccessToken";
 
 export default class AuthService {
   static async registerUser(data: createUserProps) {
@@ -53,7 +56,7 @@ export default class AuthService {
       throw new AppError("Validation failed.", 400, dbErrors);
     }
 
-    const hashPassword = await bcrypt.hash(data.password, 10);
+    const hashPassword = await bcrypt.hash(data.password!, 10);
 
     let role;
     role = await RoleService.getRoleByName(Role.CUSTOMER);
@@ -116,6 +119,19 @@ export default class AuthService {
           message: "token_has_expired",
         },
       ]);
+    }
+
+    if (existingToken.status === "EXPIRED") {
+      throw new AppError(
+        "Token has expired. Please check the most recent message in email or you can resend new verification ",
+        400,
+        [
+          {
+            field: "token_has_expired",
+            message: "token_has_expired",
+          },
+        ]
+      );
     }
 
     try {
@@ -183,6 +199,11 @@ export default class AuthService {
       throw new AppError("Account has been verified.", 400);
     }
 
+    const tokensUser = await TokenRepository.findTokensByUserId(user.id);
+    if (tokensUser) {
+      await TokenRepository.markAllTokensToExpiredByUserId(user.id);
+    }
+
     const token = signTokenEmailVerification(email);
     const one_hour = 60 * 60 * 1000;
     const newTokenData = {
@@ -209,7 +230,14 @@ export default class AuthService {
       throw new AppError("Email / Password incorrect.", 400);
     }
 
-    const isValidPassword = await bcrypt.compare(data.password, user.password);
+    if (!user.password && user.auth_provider === "google") {
+      throw new AppError(
+        "This account is linked with Google Login. Please login using Google.",
+        400
+      );
+    }
+
+    const isValidPassword = await bcrypt.compare(data.password, user.password!);
     if (!isValidPassword) {
       throw new AppError("Email / Password incorrect.", 400);
     }
@@ -315,5 +343,75 @@ export default class AuthService {
     );
 
     return { newAccessToken };
+  }
+
+  static async loginWithGoogle(token: string, deviceInfo: DeviceInfoProps) {
+    const googleUser = await verifyGoogleAccessToken(token);
+    if (!googleUser?.email) {
+      throw new AppError("Google account has no email associated.", 400);
+    }
+
+    let user;
+    user = await UserRepository.findUserByEmail(googleUser.email);
+    if (!user) {
+      let role;
+      role = await RoleService.getRoleByName(Role.CUSTOMER);
+      if (!role) {
+        const newData = {
+          name: Role.CUSTOMER,
+          created_by: "System",
+        };
+        role = await RoleService.addRole(newData);
+        if (!role) {
+          throw new AppError("Add role failed", 400);
+        }
+      }
+
+      user = await UserRepository.createUser({
+        username: googleUser.name || googleUser.email.split("@")[0],
+        email: googleUser.email,
+        password: "",
+        role_id: role.id,
+        is_verified: true,
+        auth_provider: "google",
+        image_url: googleUser.picture || null,
+        google_id: googleUser.sub,
+      });
+    }
+
+    if (!user.is_verified) {
+      await UserRepository.updateIsVerifiedByEmail(user.email);
+    }
+
+    const session = await SessionRepository.createOrUpdateSession({
+      user_id: user.id,
+      device_hash: deviceInfo.deviceHash,
+      refresh_token: "",
+      user_agent: deviceInfo.userAgent,
+      ip_address: deviceInfo.ip,
+    });
+
+    const JwtPayload = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role.name,
+      tokenVersion: session.token_version,
+      sessionId: session.id,
+      deviceHash: deviceInfo.deviceHash,
+    };
+
+    const accessToken = signAccessToken(JwtPayload, "15m");
+    const refreshToken = signRefreshToken(JwtPayload, "7d");
+
+    await SessionRepository.updateRefreshTokenById(session.id, refreshToken);
+
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      accessToken,
+      refreshToken,
+    };
   }
 }

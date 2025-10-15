@@ -12,6 +12,12 @@ export default class TokenRepository {
     });
   }
 
+  static async findTokensByUserId(user_id: string) {
+    return await prisma.tokenVerification.findMany({
+      where: { user_id },
+    });
+  }
+
   static async markStatusTokensExpired(now: Date) {
     return prisma.tokenVerification.updateMany({
       where: {
@@ -48,6 +54,15 @@ export default class TokenRepository {
     return prisma.tokenVerification.update({
       where: { token },
       data: { status: "EXPIRED" },
+    });
+  }
+
+  static async markAllTokensToExpiredByUserId(user_id: string) {
+    return prisma.tokenVerification.updateMany({
+      where: { user_id },
+      data: {
+        status: "EXPIRED",
+      },
     });
   }
 }

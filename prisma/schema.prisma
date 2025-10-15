@@ -14,15 +14,17 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  username    String   @unique
-  email       String   @unique
-  password    String
-  role_id     String
-  image_url   String?
-  is_verified Boolean  @default(false)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id            String   @id @default(uuid())
+  username      String   @unique
+  email         String   @unique
+  password      String?
+  role_id       String
+  image_url     String?
+  is_verified   Boolean  @default(false)
+  auth_provider String   @default("local")
+  google_id     String?  @unique
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
   role Role @relation(fields: [role_id], references: [id], onDelete: Restrict)
 

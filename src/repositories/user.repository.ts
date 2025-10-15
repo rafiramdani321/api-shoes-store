@@ -7,8 +7,15 @@ export default class UserRepository {
       data: {
         username: data.username,
         email: data.email,
-        password: data.password,
+        password: data.password ?? "",
         role_id: data.role_id,
+        image_url: data.image_url ?? "",
+        is_verified: data.is_verified ?? false,
+        google_id: data.google_id,
+        auth_provider: data.auth_provider ?? "local",
+      },
+      include: {
+        role: true,
       },
     });
   }
