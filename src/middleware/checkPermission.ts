@@ -11,7 +11,7 @@ export const checkPermission =
         throw new AppError("Unauthorized", 401);
       }
 
-      const user = await UserRepository.findUserById(req.user.id);
+      const user = await UserRepository.findById(req.user.user_id);
 
       if (!user?.role) {
         throw new AppError("Role not found", 403);
@@ -29,14 +29,7 @@ export const checkPermission =
       }
 
       next();
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   };

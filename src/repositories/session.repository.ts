@@ -1,9 +1,36 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../libs/prisma";
 import { createOrUpdateSessionProps } from "../types/session.type";
 
 export default class SessionRepository {
-  static async createOrUpdateSession(data: createOrUpdateSessionProps) {
+  static async createOrUpdate(data: createOrUpdateSessionProps) {
     return prisma.session.upsert({
+      where: {
+        user_id_device_hash: {
+          user_id: data.user_id,
+          device_hash: data.device_hash,
+        },
+      },
+      update: {
+        refresh_token: data.refresh_token,
+        ip_address: data.ip_address,
+        user_agent: data.user_agent,
+      },
+      create: {
+        user_id: data.user_id,
+        refresh_token: data.refresh_token,
+        user_agent: data.user_agent,
+        ip_address: data.ip_address,
+        device_hash: data.device_hash,
+      },
+    });
+  }
+
+  static async createOrUpdateTx(
+    tx: Prisma.TransactionClient,
+    data: createOrUpdateSessionProps
+  ) {
+    return tx.session.upsert({
       where: {
         user_id_device_hash: {
           user_id: data.user_id,
@@ -38,8 +65,31 @@ export default class SessionRepository {
     });
   }
 
+  static async updateRefreshTokenByIdTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    refreshToken: string | null
+  ) {
+    return tx.session.update({
+      where: { id },
+      data: { refresh_token: refreshToken },
+    });
+  }
+
   static async incrementTokenVersionById(id: string) {
     return prisma.session.update({
+      where: { id },
+      data: {
+        token_version: { increment: 1 },
+      },
+    });
+  }
+
+  static async incrementTokenVersionByIdTx(
+    tx: Prisma.TransactionClient,
+    id: string
+  ) {
+    return tx.session.update({
       where: { id },
       data: {
         token_version: { increment: 1 },

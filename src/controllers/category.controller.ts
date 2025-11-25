@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { getClientInfo } from "../utils/getClientInfo";
-import { errorResponse, successResponse } from "../utils/responses";
+import { errorResponse, handleSuccess } from "../utils/responses";
 import CategoryService from "../services/category.service";
 import {
   createCategoryLogger,
@@ -12,43 +12,35 @@ import { AppError } from "../utils/errors";
 import { CategoryCreate, CategoryUpdate } from "../types/category.type";
 
 export default class CategoryController {
-  static async getCategories(req: Request, res: Response) {
+  static async getCategories(req: Request, res: Response, next: NextFunction) {
     try {
       const response = await CategoryService.getCategories(req.query);
-      return successResponse(res, "Fetching categories success", 200, response);
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      return handleSuccess(res, "Fetching categories success", 200, response);
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getCategoryById(req: Request, res: Response) {
+  static async getCategoryById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { id } = req.params;
     try {
       const response = await CategoryService.getCategoryById(id);
-      return successResponse(
+      return handleSuccess(
         res,
         "Fetcing category by id success",
         200,
         response
       );
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async addCategory(req: Request, res: Response) {
+  static async addCategory(req: Request, res: Response, next: NextFunction) {
     const { ip, userAgent } = getClientInfo(req);
     const data = await req.body;
     const user = req.user;
@@ -68,10 +60,8 @@ export default class CategoryController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Create new category success", 201);
+      return handleSuccess(res, "Create new category success", 201);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       createCategoryLogger.error({
         event: "create_category_failed",
         email: data?.email || "unknown",
@@ -80,17 +70,11 @@ export default class CategoryController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async updateCategory(req: Request, res: Response) {
+  static async updateCategory(req: Request, res: Response, next: NextFunction) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const data = req.body;
@@ -112,10 +96,8 @@ export default class CategoryController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Update category success", 200);
+      return handleSuccess(res, "Update category success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateCategoryLogger.error({
         event: "update_category_failed",
         email: data?.email || "unknown",
@@ -124,17 +106,11 @@ export default class CategoryController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteCategory(req: Request, res: Response) {
+  static async deleteCategory(req: Request, res: Response, next: NextFunction) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
@@ -149,10 +125,8 @@ export default class CategoryController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Category deleted success", 200);
+      return handleSuccess(res, "Category deleted success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       deleteCategoryLogger.error({
         event: "delete_category_failed",
         email: user?.email || "unknown",
@@ -161,17 +135,15 @@ export default class CategoryController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteManyCategories(req: Request, res: Response) {
+  static async deleteManyCategories(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     try {
@@ -185,10 +157,8 @@ export default class CategoryController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "deleted categories success", 200, response);
+      return handleSuccess(res, "deleted categories success", 200, response);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       deleteManyCategoryLogger.error({
         event: "delete_categories_failed",
         email: user?.email || "unknown",
@@ -197,13 +167,7 @@ export default class CategoryController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 }

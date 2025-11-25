@@ -2,9 +2,15 @@ import { Router } from "express";
 
 import AuthRateLimiter from "../libs/rate-limiter/auth.rate-limiter";
 import { blockIfAuthenticated } from "../middleware/blockifAuthenticated";
-import { verifyAccessToken } from "../middleware/verifyAccessToken";
+import { requireAuth } from "../middleware/requireAuth";
 import AuthController from "../controllers/auth.controller";
-import { verifyRefreshToken } from "../middleware/verifyRefreshToken";
+import { requireAuthRefreshToken } from "../middleware/requireAuthRefreshToken";
+import { validateRequest } from "../middleware/validateRequest";
+import {
+  loginValidation,
+  registerValidation,
+  resendEmailVerificationValidation,
+} from "../validations/validation-schema";
 
 const routerAuth = Router();
 
@@ -12,6 +18,7 @@ routerAuth.post(
   "/register",
   blockIfAuthenticated,
   AuthRateLimiter.registerLimiter,
+  validateRequest(registerValidation),
   AuthController.register
 );
 routerAuth.get(
@@ -21,12 +28,14 @@ routerAuth.get(
 routerAuth.post(
   "/resend-email-verification",
   AuthRateLimiter.resendEmailVerification,
+  validateRequest(resendEmailVerificationValidation),
   AuthController.resendTokenEmailVerification
 );
 routerAuth.post(
   "/login",
   blockIfAuthenticated,
   AuthRateLimiter.loginLimiter,
+  validateRequest(loginValidation),
   AuthController.login
 );
 routerAuth.post(
@@ -35,11 +44,11 @@ routerAuth.post(
   AuthRateLimiter.loginLimiter,
   AuthController.loginWithGoogle
 );
-routerAuth.post("/logout", verifyAccessToken, AuthController.logout);
-routerAuth.get("/me", verifyAccessToken, AuthController.getSelf);
+routerAuth.post("/logout", requireAuth, AuthController.logout);
+routerAuth.get("/me", requireAuth, AuthController.getSelf);
 routerAuth.get(
   "/refresh-token",
-  verifyRefreshToken,
+  requireAuthRefreshToken,
   AuthController.getRefreshToken
 );
 

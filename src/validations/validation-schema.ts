@@ -26,6 +26,13 @@ export const registerValidation = z
     path: ["confirmPassword"],
   });
 
+export const resendEmailVerificationValidation = z.object({
+  email: z
+    .string()
+    .nonempty("Email is required.")
+    .email("Invalid email format."),
+});
+
 export const loginValidation = z.object({
   email: z.string().nonempty("Email is required."),
   password: z.string().nonempty("Password is required."),

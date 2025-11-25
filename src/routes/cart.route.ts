@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { verifyAccessToken } from "../middleware/verifyAccessToken";
+import { requireAuth } from "../middleware/requireAuth";
 import CartController from "../controllers/cart.controller";
 
 const routerCart = Router();
 
-routerCart.get("/", verifyAccessToken, CartController.getCartsByUserId);
-routerCart.post("/", verifyAccessToken, CartController.addCart);
-routerCart.delete("/:id", verifyAccessToken, CartController.deleteCartItemById);
+routerCart.get("/", requireAuth, CartController.getCartsByUserId);
+routerCart.post("/", requireAuth, CartController.addCart);
+routerCart.delete("/:id", requireAuth, CartController.deleteCartItemById);
 
 export default routerCart;

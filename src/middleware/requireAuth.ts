@@ -1,10 +1,10 @@
 import { NextFunction, Request, Response } from "express";
-import { AppError } from "../utils/errors";
-import { verifySignAccessToken } from "../libs/jwt";
-import UserRepository from "../repositories/user.repository";
-import { errorResponse } from "../utils/responses";
 
-export const verifyAccessToken = async (
+import { AppError } from "../utils/errors";
+import { verifyAccessToken } from "../utils/accessToken";
+import UserService from "../services/user.service";
+
+export const requireAuth = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -20,20 +20,21 @@ export const verifyAccessToken = async (
       throw new AppError("Access token not found.", 401);
     }
 
-    let decoded;
+    let payload;
     try {
-      decoded = verifySignAccessToken(token);
+      payload = verifyAccessToken(token);
     } catch (error) {
       throw new AppError("Invalid or expired access token.", 401);
     }
 
-    const user = await UserRepository.findUserById(decoded.id);
-    if (!user) {
-      throw new AppError("User not found.", 404);
+    if (!payload.user_id || !payload.session_id) {
+      throw new AppError("Malformed token payload.", 400);
     }
 
+    const user = await UserService.getById(payload.user_id);
     const session = user.Session.find(
-      (s) => s.id === decoded.sessionId && s.device_hash === decoded.deviceHash
+      (s) =>
+        s.id === payload.session_id && s.device_hash === payload.device_hash
     );
     if (!session) {
       throw new AppError(
@@ -49,24 +50,17 @@ export const verifyAccessToken = async (
       );
     }
 
-    if (decoded.tokenVersion !== session.token_version) {
+    if (payload.token_version !== session.token_version) {
       throw new AppError(
         "Access token no longer valid. Please login again.",
         401
       );
     }
 
-    req.user = decoded;
+    req.user = payload;
     req.session = session;
     next();
   } catch (error) {
-    const isKnownError = error instanceof AppError;
-
-    return errorResponse(
-      res,
-      isKnownError ? error.message : "Internal server error.",
-      isKnownError ? error.statusCode : 500,
-      isKnownError ? error.details : undefined
-    );
+    next(error);
   }
 };

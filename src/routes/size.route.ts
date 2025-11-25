@@ -1,8 +1,8 @@
 import { Router } from "express";
 import SizeController from "../controllers/size.controller";
-import { verifyAccessToken } from "../middleware/verifyAccessToken";
+import { requireAuth } from "../middleware/requireAuth";
 import { checkPermission } from "../middleware/checkPermission";
-import { Permission } from "../constants";
+import { Permission } from "../constants/role-permission";
 
 const routerSize = Router();
 
@@ -10,25 +10,25 @@ routerSize.get("/", SizeController.getSizes);
 routerSize.get("/:id", SizeController.getSizeById);
 routerSize.post(
   "/",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.CREATE_SIZE]),
   SizeController.addSize
 );
 routerSize.put(
   "/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_SIZE]),
   SizeController.updateSize
 );
 routerSize.delete(
   "/delete-many",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.DELETE_SIZE]),
   SizeController.deleteManySizeByIds
 );
 routerSize.delete(
   "/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.DELETE_SIZE]),
   SizeController.deleteSizeById
 );

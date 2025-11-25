@@ -5,12 +5,12 @@ import { CreateCartType } from "../types/cart.type";
 import { AppError } from "../utils/errors";
 
 export default class CartService {
-  static async getCartsByUserId(user_id: string) {
+  static async getByUserId(user_id: string) {
     if (!user_id || user_id === "") {
       throw new AppError("User id is required", 404);
     }
 
-    const user = await UserRepository.findUserById(user_id);
+    const user = await UserRepository.findById(user_id);
     if (!user) {
       throw new AppError("User not found", 404);
     }
@@ -36,7 +36,7 @@ export default class CartService {
       throw new AppError("id user required", 404);
     }
 
-    const user = await UserRepository.findUserById(data.user_id);
+    const user = await UserRepository.findById(data.user_id);
     if (!user) {
       throw new AppError("User not found", 404);
     }

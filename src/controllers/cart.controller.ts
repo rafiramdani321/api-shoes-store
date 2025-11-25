@@ -1,64 +1,63 @@
-import { Request, Response } from "express";
-import CartService from "../services/cart.service";
-import { errorResponse, successResponse } from "../utils/responses";
+import { NextFunction, Request, Response } from "express";
+
 import { AppError } from "../utils/errors";
+import { errorResponse, handleSuccess } from "../utils/responses";
+import CartService from "../services/cart.service";
 
 export default class CartController {
-  static async getCartsByUserId(req: Request, res: Response) {
-    const user = req.user;
+  static async getCartsByUserId(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const response = await CartService.getCartsByUserId(user?.id!);
-      return successResponse(
+      const user = req.user;
+      if (!user || !user.user_id) {
+        throw new AppError("Unauthorized: missing user data.", 401);
+      }
+      const response = await CartService.getByUserId(user.user_id);
+      return handleSuccess(
         res,
         "fetching carts by user success",
         200,
         response
       );
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
-  static async addCart(req: Request, res: Response) {
-    const user = req.user;
-    const body = req.body;
+  static async addCart(req: Request, res: Response, next: NextFunction) {
     try {
+      const body = req.body;
+      const user = req.user;
+
+      if (!user || !user.user_id) {
+        throw new AppError("Unathorized: missing user data.", 401);
+      }
+
       const payload = {
         ...body,
-        user_id: user?.id!,
+        user_id: user.user_id,
       };
 
       await CartService.addCart(payload);
-      return successResponse(res, "Add cart success", 201);
+      return handleSuccess(res, "Add cart success", 201);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteCartItemById(req: Request, res: Response) {
+  static async deleteCartItemById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { id } = req.params;
     try {
       await CartService.deleteCartItemById(id);
-      return successResponse(res, "delete cart item success", 200);
+      return handleSuccess(res, "delete cart item success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 }

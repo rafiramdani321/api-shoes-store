@@ -60,7 +60,7 @@ export default class RoleRepository {
     return prisma.role.findUnique({ where: { id } });
   }
 
-  static async findRoleByName(name: string) {
+  static async findByName(name: string) {
     return prisma.role.findUnique({ where: { name } });
   }
 

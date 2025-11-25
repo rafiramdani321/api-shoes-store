@@ -57,7 +57,7 @@ export default class RoleService {
   }
 
   static async getRoleById(id: string) {
-    if (!id || id == "") {
+    if (!id || id === "") {
       throw new AppError("Role id requried", 404);
     }
 
@@ -68,12 +68,16 @@ export default class RoleService {
     return role;
   }
 
-  static async getRoleByName(name: string) {
+  static async getByName(name: string) {
     if (!name || name === "") {
-      throw new AppError("Role name is required");
+      throw new AppError("Role name is required", 400);
     }
 
-    const role = await RoleRepository.findRoleByName(name);
+    const role = await RoleRepository.findByName(name);
+    if (!role) {
+      throw new AppError("Role name not found.", 404);
+    }
+
     return role;
   }
 
@@ -86,7 +90,7 @@ export default class RoleService {
 
     const dbErrors: { field: keyof RoleCreateType; message: string }[] = [];
 
-    const existingName = await RoleRepository.findRoleByName(
+    const existingName = await RoleRepository.findByName(
       data.name.toLowerCase()
     );
     if (existingName) {
@@ -119,7 +123,7 @@ export default class RoleService {
 
     const dbErrors: { field: keyof RoleUpdateType; message: string }[] = [];
 
-    const existingName = await RoleRepository.findRoleByName(
+    const existingName = await RoleRepository.findByName(
       data.name.toLowerCase()
     );
     if (existingName && existingName.id !== data.id) {

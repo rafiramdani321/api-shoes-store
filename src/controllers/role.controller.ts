@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import RoleService from "../services/role.service";
-import { errorResponse, successResponse } from "../utils/responses";
+import { errorResponse, handleSuccess } from "../utils/responses";
 import { AppError } from "../utils/errors";
 import { getClientInfo } from "../utils/getClientInfo";
 import {
@@ -21,38 +21,26 @@ import {
 } from "../libs/logger/index.logger";
 
 export default class RoleController {
-  static async getRoles(req: Request, res: Response) {
+  static async getRoles(req: Request, res: Response, next: NextFunction) {
     try {
       const response = await RoleService.getRoles(req.query);
-      return successResponse(res, "Fetching roles success", 200, response);
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      return handleSuccess(res, "Fetching roles success", 200, response);
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getRoleById(req: Request, res: Response) {
+  static async getRoleById(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params;
     try {
       const response = await RoleService.getRoleById(id);
-      return successResponse(res, "Fetcing role by id success", 200, response);
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      return handleSuccess(res, "Fetcing role by id success", 200, response);
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async addRole(req: Request, res: Response) {
+  static async addRole(req: Request, res: Response, next: NextFunction) {
     const { ip, userAgent } = getClientInfo(req);
     const data = await req.body;
     const user = req.user;
@@ -71,10 +59,8 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Create new role success", 201);
+      return handleSuccess(res, "Create new role success", 201);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       createRoleLogger.error({
         event: "create_role_failed",
         email: data?.email || "unknown",
@@ -83,17 +69,11 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async updateRole(req: Request, res: Response) {
+  static async updateRole(req: Request, res: Response, next: NextFunction) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const data = req.body;
@@ -114,10 +94,8 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Update role success", 200);
+      return handleSuccess(res, "Update role success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateRoleLogger.error({
         event: "update_role_failed",
         email: data?.email || "unknown",
@@ -126,17 +104,11 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteRole(req: Request, res: Response) {
+  static async deleteRole(req: Request, res: Response, next: NextFunction) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
@@ -151,11 +123,8 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Role deleted success", 200);
+      return handleSuccess(res, "Role deleted success", 200);
     } catch (error: any) {
-      console.log(error);
-      const isKnownError = error instanceof AppError;
-
       deleteRoleLogger.error({
         event: "delete_role_failed",
         email: user?.email || "unknown",
@@ -164,17 +133,15 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteManyRoles(req: Request, res: Response) {
+  static async deleteManyRoles(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     try {
@@ -188,10 +155,8 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "deleted roles success", 200, response);
+      return handleSuccess(res, "deleted roles success", 200, response);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       deleteManyRolesLogger.error({
         event: "delete_roles_failed",
         email: user?.email || "unknown",
@@ -200,78 +165,61 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async getPermissions(req: Request, res: Response) {
+  static async getPermissions(req: Request, res: Response, next: NextFunction) {
     try {
       const response = await RoleService.getPermissions(req.query);
-      return successResponse(
-        res,
-        "Fetching permissions success",
-        200,
-        response
-      );
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      return handleSuccess(res, "Fetching permissions success", 200, response);
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getRolePermissions(req: Request, res: Response) {
+  static async getRolePermissions(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const response = await RoleService.getRolePermissions(req.query);
-      return successResponse(
+      return handleSuccess(
         res,
         "Fetching role permissions success",
         200,
         response
       );
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getRolePermissionById(req: Request, res: Response) {
+  static async getRolePermissionById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { id } = req.params;
     try {
       const response = await RoleService.getRolePermissionById(id);
-      return successResponse(
+      return handleSuccess(
         res,
         "Fetching role permissions by id success",
         200,
         response
       );
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async addRolePermission(req: Request, res: Response) {
+  static async addRolePermission(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const data = await req.body;
     const user = req.user;
@@ -292,10 +240,8 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Create new role permission success", 201);
+      return handleSuccess(res, "Create new role permission success", 201);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       createRolePermissionLogger.error({
         event: "create_rolePermission_failed",
         email: data?.email || "unknown",
@@ -304,17 +250,15 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async updateRolePermission(req: Request, res: Response) {
+  static async updateRolePermission(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const data = req.body;
@@ -336,10 +280,8 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Update role permission succcess", 200);
+      return handleSuccess(res, "Update role permission succcess", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateRolePermissionLogger.error({
         event: "update_rolePermission_failed",
         email: data?.email || "unknown",
@@ -348,17 +290,15 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteRolePermission(req: Request, res: Response) {
+  static async deleteRolePermission(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
@@ -373,10 +313,8 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Role permission deleted success", 200);
+      return handleSuccess(res, "Role permission deleted success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       deleteRolePermissionLogger.error({
         event: "update_rolePermission_failed",
         email: user?.email || "unknown",
@@ -385,17 +323,15 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteManyRolePermission(req: Request, res: Response) {
+  static async deleteManyRolePermission(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     try {
@@ -411,15 +347,13 @@ export default class RoleController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(
+      return handleSuccess(
         res,
         "deleted role permissions success",
         200,
         response
       );
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       deleteManyRolePermissionLogger.error({
         event: "delete_many_rolePermission_failed",
         email: user?.email || "unknown",
@@ -428,13 +362,7 @@ export default class RoleController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 }

@@ -1,0 +1,12 @@
+/*
+  Warnings:
+
+  - The `gender` column on the `User` table would be dropped and recreated. This will lead to data loss if there is data in the column.
+
+*/
+-- CreateEnum
+CREATE TYPE "public"."Gender" AS ENUM ('MALE', 'FEMALE');
+
+-- AlterTable
+ALTER TABLE "public"."User" DROP COLUMN "gender",
+ADD COLUMN     "gender" "public"."Gender";

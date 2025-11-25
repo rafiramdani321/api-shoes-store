@@ -1,28 +1,31 @@
+import { Prisma, Token } from "@prisma/client";
 import { prisma } from "../libs/prisma";
-import { createTokenProps } from "../types/token.type";
+import { CreateToken } from "../types/token.type";
 
 export default class TokenRepository {
-  static async createToken(data: createTokenProps) {
-    return prisma.tokenVerification.create({
+  static async createTokenTx(tx: Prisma.TransactionClient, data: CreateToken) {
+    return tx.token.create({
       data: {
         token: data.token,
         user_id: data.user_id,
-        expires_at: data.expires_at,
+        status: data.status,
+        type: data.type,
+        expired_at: data.expired_at,
       },
     });
   }
 
-  static async findTokensByUserId(user_id: string) {
-    return await prisma.tokenVerification.findMany({
+  static async findManyByUserId(user_id: string) {
+    return await prisma.token.findMany({
       where: { user_id },
     });
   }
 
   static async markStatusTokensExpired(now: Date) {
-    return prisma.tokenVerification.updateMany({
+    return prisma.token.updateMany({
       where: {
         status: "ACTIVE",
-        expires_at: { lt: now },
+        expired_at: { lt: now },
       },
       data: {
         status: "EXPIRED",
@@ -31,34 +34,48 @@ export default class TokenRepository {
   }
 
   static async deleteTokensExpiredAndUsed(cleanupThreshold: Date) {
-    return prisma.tokenVerification.deleteMany({
+    return prisma.token.deleteMany({
       where: {
         status: { in: ["EXPIRED", "USED"] },
-        expires_at: { lt: cleanupThreshold },
+        expired_at: { lt: cleanupThreshold },
       },
     });
   }
 
-  static async findTokenByToken(token: string) {
-    return prisma.tokenVerification.findUnique({ where: { token } });
+  static async deleteById(id: string) {
+    return prisma.token.delete({ where: { id } });
   }
 
-  static async markTokenUsedByToken(token: string) {
-    return prisma.tokenVerification.update({
+  static async findByToken(token: string): Promise<Token | null> {
+    return prisma.token.findUnique({ where: { token } });
+  }
+
+  static async markStatusByToken(
+    token: string,
+    status: Token["status"]
+  ): Promise<Token> {
+    return prisma.token.update({
       where: { token },
-      data: { status: "USED" },
+      data: { status },
     });
   }
 
-  static async markTokenExpiredByToken(token: string) {
-    return prisma.tokenVerification.update({
+  static async markStatusByTokenTx(
+    tx: Prisma.TransactionClient,
+    token: string,
+    status: Token["status"]
+  ): Promise<Token> {
+    return tx.token.update({
       where: { token },
-      data: { status: "EXPIRED" },
+      data: { status },
     });
   }
 
-  static async markAllTokensToExpiredByUserId(user_id: string) {
-    return prisma.tokenVerification.updateMany({
+  static async markAllTokensToExpiredByUserId(
+    tx: Prisma.TransactionClient,
+    user_id: string
+  ) {
+    return tx.token.updateMany({
       where: { user_id },
       data: {
         status: "EXPIRED",

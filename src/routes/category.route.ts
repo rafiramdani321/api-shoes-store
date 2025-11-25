@@ -1,8 +1,8 @@
 import { Router } from "express";
 import CategoryController from "../controllers/category.controller";
-import { verifyAccessToken } from "../middleware/verifyAccessToken";
+import { requireAuth } from "../middleware/requireAuth";
 import { checkPermission } from "../middleware/checkPermission";
-import { Permission } from "../constants";
+import { Permission } from "../constants/role-permission";
 
 const routerCategory = Router();
 
@@ -10,25 +10,25 @@ routerCategory.get("/", CategoryController.getCategories);
 routerCategory.get("/:id", CategoryController.getCategoryById);
 routerCategory.post(
   "/",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.CREATE_CATEGORY]),
   CategoryController.addCategory
 );
 routerCategory.put(
   "/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_CATEGORY]),
   CategoryController.updateCategory
 );
 routerCategory.delete(
   "/delete-many",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.DELETE_CATEGORY]),
   CategoryController.deleteManyCategories
 );
 routerCategory.delete(
   "/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.DELETE_CATEGORY]),
   CategoryController.deleteCategory
 );

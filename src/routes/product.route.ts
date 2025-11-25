@@ -1,9 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
-import { verifyAccessToken } from "../middleware/verifyAccessToken";
+import { requireAuth } from "../middleware/requireAuth";
 import ProductController from "../controllers/product.controller";
 import { checkPermission } from "../middleware/checkPermission";
-import { Permission } from "../constants";
+import { Permission } from "../constants/role-permission";
 
 const routerProduct = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -20,7 +20,7 @@ routerProduct.get("/slug/:slug", ProductController.getProductBySlug);
 // Product images
 routerProduct.post(
   "/images",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_PRODUCT]),
   upload.array("images"),
   ProductController.addProductImage
@@ -28,7 +28,7 @@ routerProduct.post(
 
 routerProduct.delete(
   "/images/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_PRODUCT]),
   ProductController.deleteProductImageById
 );
@@ -36,21 +36,21 @@ routerProduct.delete(
 // Product sizes
 routerProduct.post(
   "/product-sizes",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_PRODUCT]),
   ProductController.addSizeAndStockProduct
 );
 
 routerProduct.put(
   "/product-sizes/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_PRODUCT]),
   ProductController.updateSizeAndStockProduct
 );
 
 routerProduct.delete(
   "/product-sizes/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_PRODUCT]),
   ProductController.deleteSizeProductById
 );
@@ -58,7 +58,7 @@ routerProduct.delete(
 // Bulk delete
 routerProduct.delete(
   "/delete-many",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.DELETE_PRODUCT]),
   ProductController.deleteManyProduct
 );
@@ -68,7 +68,7 @@ routerProduct.get("/:id", ProductController.getProductById);
 
 routerProduct.post(
   "/",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.CREATE_PRODUCT]),
   upload.array("images"),
   ProductController.addProduct
@@ -76,14 +76,14 @@ routerProduct.post(
 
 routerProduct.put(
   "/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.UPDATE_PRODUCT]),
   ProductController.updateProductById
 );
 
 routerProduct.delete(
   "/:id",
-  verifyAccessToken,
+  requireAuth,
   checkPermission([Permission.DELETE_PRODUCT]),
   ProductController.deleteProduct
 );

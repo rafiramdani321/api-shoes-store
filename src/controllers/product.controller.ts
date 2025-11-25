@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { ProductService } from "../services/product.service";
-import { errorResponse, successResponse } from "../utils/responses";
+import { errorResponse, handleSuccess } from "../utils/responses";
 import { AppError } from "../utils/errors";
 import {
   createProductLogger,
@@ -12,23 +12,20 @@ import { getClientInfo } from "../utils/getClientInfo";
 import { UpdateProductType } from "../types/product.type";
 
 export default class ProductController {
-  static async getProducts(req: Request, res: Response) {
+  static async getProducts(req: Request, res: Response, next: NextFunction) {
     try {
       const response = await ProductService.getProducts(req.query);
-      return successResponse(res, "Fetching products success", 200, response);
-    } catch (error) {
-      console.log(error);
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "internal server error",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      return handleSuccess(res, "Fetching products success", 200, response);
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getProductsByCategorySlug(req: Request, res: Response) {
+  static async getProductsByCategorySlug(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       let sizes: string[] | undefined = undefined;
 
@@ -52,24 +49,22 @@ export default class ProductController {
         sizes,
       };
       const response = await ProductService.getProductsByCategorySlug(query);
-      return successResponse(
+      return handleSuccess(
         res,
         "Fetching products by category success",
         200,
         response
       );
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "internal server error",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getProductsBySubCategorySlug(req: Request, res: Response) {
+  static async getProductsBySubCategorySlug(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       let sizes: string[] | undefined = undefined;
 
@@ -94,67 +89,52 @@ export default class ProductController {
         sizes,
       };
       const response = await ProductService.getProductsBySubCategorySlug(query);
-      return successResponse(
+      return handleSuccess(
         res,
         "Fetching products by sub category success",
         200,
         response
       );
-    } catch (error) {
-      console.log(error);
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "internal server error",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getProductById(req: Request, res: Response) {
+  static async getProductById(req: Request, res: Response, next: NextFunction) {
     const { id } = req.params;
     try {
       const response = await ProductService.getProductById(id);
-      return successResponse(
+      return handleSuccess(
         res,
         "Fetching product by id success",
         200,
         response
       );
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getProductBySlug(req: Request, res: Response) {
+  static async getProductBySlug(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { slug } = req.params;
     try {
       const response = await ProductService.getProductBySlug(slug);
-      return successResponse(
+      return handleSuccess(
         res,
         "Fetching product by slug success",
         200,
         response
       );
-    } catch (error) {
-      const isKnownError = error instanceof AppError;
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async addProduct(req: Request, res: Response) {
+  static async addProduct(req: Request, res: Response, next: NextFunction) {
     const { userAgent, ip } = getClientInfo(req);
     const files = req.files as Express.Multer.File[];
     const body = req.body;
@@ -183,12 +163,10 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Product created success", 201, {
+      return handleSuccess(res, "Product created success", 201, {
         data: newProduct,
       });
     } catch (error: any) {
-      console.log(error);
-      const isKnownError = error instanceof AppError;
       createProductLogger.error({
         event: "create_product_failed",
         email: user?.email || "unknown",
@@ -197,16 +175,15 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async updateProductById(req: Request, res: Response) {
+  static async updateProductById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const data = req.body;
@@ -233,10 +210,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Update product success", 200);
+      return handleSuccess(res, "Update product success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateProductLogger.error({
         event: "update_product_failed",
         email: data?.email || "unknown",
@@ -245,17 +220,11 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteProduct(req: Request, res: Response) {
+  static async deleteProduct(req: Request, res: Response, next: NextFunction) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
@@ -270,10 +239,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Product deleted success", 200);
+      return handleSuccess(res, "Product deleted success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       deleteProductLogger.error({
         event: "delete_product_failed",
         email: user?.email || "unknown",
@@ -282,17 +249,15 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteManyProduct(req: Request, res: Response) {
+  static async deleteManyProduct(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     try {
@@ -306,10 +271,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Products deleted success", 200);
+      return handleSuccess(res, "Products deleted success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       deleteManyProductsLogger.error({
         event: "delete_many_product_failed",
         email: user?.email || "unknown",
@@ -318,17 +281,15 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async addProductImage(req: Request, res: Response) {
+  static async addProductImage(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const files = req.files as Express.Multer.File[];
@@ -349,10 +310,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Product image added success", 200);
+      return handleSuccess(res, "Product image added success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateProductLogger.error({
         event: "add_image_product_failed",
         email: user?.email || "unknown",
@@ -361,17 +320,15 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteProductImageById(req: Request, res: Response) {
+  static async deleteProductImageById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
@@ -386,10 +343,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Product image deleted success", 200);
+      return handleSuccess(res, "Product image deleted success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateProductLogger.error({
         event: "delete_image_product_failed",
         email: user?.email || "unknown",
@@ -398,17 +353,15 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async addSizeAndStockProduct(req: Request, res: Response) {
+  static async addSizeAndStockProduct(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     try {
@@ -422,10 +375,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Product sizes added success", 200);
+      return handleSuccess(res, "Product sizes added success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateProductLogger.error({
         event: "add_size_product_failed",
         email: user?.email || "unknown",
@@ -434,17 +385,15 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async updateSizeAndStockProduct(req: Request, res: Response) {
+  static async updateSizeAndStockProduct(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const body = req.body;
@@ -465,10 +414,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Product sizes updated success", 200);
+      return handleSuccess(res, "Product sizes updated success", 200);
     } catch (error: any) {
-      const isKnownError = error instanceof AppError;
-
       updateProductLogger.error({
         event: "update_size_product_failed",
         email: user?.email || "unknown",
@@ -477,17 +424,15 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 
-  static async deleteSizeProductById(req: Request, res: Response) {
+  static async deleteSizeProductById(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     const { ip, userAgent } = getClientInfo(req);
     const user = req.user;
     const { id } = req.params;
@@ -502,11 +447,8 @@ export default class ProductController {
         timestamp: new Date().toISOString(),
       });
 
-      return successResponse(res, "Delete size product success", 200);
+      return handleSuccess(res, "Delete size product success", 200);
     } catch (error: any) {
-      console.log(error);
-      const isKnownError = error instanceof AppError;
-
       updateProductLogger.error({
         event: "delete_size_product_failed",
         email: user?.email || "unknown",
@@ -515,13 +457,7 @@ export default class ProductController {
         userAgent,
         timestamp: new Date().toISOString(),
       });
-
-      return errorResponse(
-        res,
-        isKnownError ? error.message : "Internal server error.",
-        isKnownError ? error.statusCode : 500,
-        isKnownError ? error.details : undefined
-      );
+      next(error);
     }
   }
 }

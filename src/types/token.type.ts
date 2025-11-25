@@ -1,5 +1,7 @@
-export type createTokenProps = {
+export type CreateToken = {
   token: string;
   user_id: string;
-  expires_at: Date;
+  status: "EXPIRED" | "ACTIVE" | "USED";
+  type: "EMAIL_ACTIVATION" | "PASSWORD_RESET";
+  expired_at: Date;
 };

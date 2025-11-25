@@ -14,23 +14,32 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  username      String   @unique
-  email         String   @unique
+  id            String    @id @default(uuid())
+  username      String    @unique
+  fullname      String?
+  email         String    @unique
   password      String?
   role_id       String
   image_url     String?
-  is_verified   Boolean  @default(false)
-  auth_provider String   @default("local")
-  google_id     String?  @unique
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  is_verified   Boolean   @default(false)
+  auth_provider String    @default("local")
+  google_id     String?   @unique
+  gender        Gender?
+  phone_number  String?
+  date_of_birth DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
 
   role Role @relation(fields: [role_id], references: [id], onDelete: Restrict)
 
-  Session           Session[]
-  TokenVerification TokenVerification[]
-  Cart              Cart?
+  Session Session[]
+  Token   Token[]
+  Cart    Cart?
+}
+
+enum Gender {
+  MALE
+  FEMALE
 }
 
 model Session {
@@ -47,14 +56,16 @@ model Session {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@unique([user_id, device_hash])
+  @@index([user_id])
 }
 
-model TokenVerification {
+model Token {
   id         String      @id @default(uuid())
   token      String      @unique
   user_id    String
   status     statusToken @default(ACTIVE)
-  expires_at DateTime
+  type       TokenType
+  expired_at DateTime
   created_at DateTime    @default(now())
   updated_at DateTime    @updatedAt
 
@@ -67,6 +78,11 @@ enum statusToken {
   EXPIRED
   ACTIVE
   USED
+}
+
+enum TokenType {
+  EMAIL_ACTIVATION
+  PASSWORD_RESET
 }
 
 model Role {

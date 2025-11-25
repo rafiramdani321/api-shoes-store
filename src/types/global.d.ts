@@ -4,13 +4,13 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
-        id: string;
+        user_id: string;
         email: string;
         username: string;
         role: string | any;
-        tokenVersion: number;
-        sessionId: string;
-        deviceHash: string;
+        token_version: number;
+        session_id: string;
+        device_hash: string;
       };
       refreshToken?: string;
       session?: string | any;

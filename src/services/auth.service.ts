@@ -1,53 +1,60 @@
-import bcrypt from "bcrypt";
-import { OAuth2Client } from "google-auth-library";
-
-import { createUserProps } from "../types/user.type";
 import { AppError } from "../utils/errors";
+import ms from "ms";
+import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
+
+import { prisma } from "../libs/prisma";
+import { verifyGoogleAccessToken } from "../utils/verifyGoogleAccessToken";
+import { comparePassword, hashPassword } from "../utils/hash";
+import {
+  signEmailVerificationToken,
+  verifyEmailVerificationToken,
+} from "../utils/emailVerificationToken";
+import { signAccessToken } from "../utils/accessToken";
+import { signRefreshToken } from "../utils/refreshToken";
+import { Role } from "../constants/role-permission";
+import { validationResponses } from "../validations/index.validation";
+import { env } from "../constants/env";
+import {
+  DeviceInfo,
+  LoginInput,
+  RegisterInput,
+  RequireAuth,
+} from "../types/auth.type";
 import {
   loginValidation,
   registerValidation,
 } from "../validations/validation-schema";
-import RoleService from "./role.service";
-import { Role } from "../constants";
 import UserRepository from "../repositories/user.repository";
-import {
-  signAccessToken,
-  signRefreshToken,
-  signTokenEmailVerification,
-  verifyTokenEmailVerification,
-} from "../libs/jwt";
 import TokenRepository from "../repositories/token.repository";
 import { sendVerificationEmail } from "./mail.service";
-import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { generateDeviceHash } from "../utils/generateDeviceHash";
 import SessionRepository from "../repositories/session.repository";
-import {
-  DeviceInfoProps,
-  LoginProps,
-  UserRefreshTokenProps,
-  VerifyAccessTokenProps,
-} from "../types/auth.type";
-import { validationResponses } from "../validations/index.validation";
-import { verifyGoogleAccessToken } from "../utils/verifyGoogleAccessToken";
+import RoleService from "./role.service";
+import UserService from "./user.service";
+import TokenService from "./token.service";
 
 export default class AuthService {
-  static async registerUser(data: createUserProps) {
-    const errorsValidation = registerValidation.safeParse(data);
-    if (!errorsValidation.success) {
-      const errors = validationResponses(errorsValidation);
-      throw new AppError("Validation failed.", 400, errors);
+  static async register(data: RegisterInput) {
+    const validation = registerValidation.safeParse(data);
+    if (!validation.success) {
+      throw new AppError(
+        "Validation failed.",
+        400,
+        validationResponses(validation)
+      );
     }
 
-    const dbErrors: { field: keyof createUserProps; message: string }[] = [];
+    const [existingUsername, existingEmail] = await Promise.all([
+      UserRepository.findByUsername(data.username),
+      UserRepository.findByEmail(data.email),
+    ]);
 
-    const existingUsername = await UserRepository.findUserByUsername(
-      data.username
-    );
+    const dbErrors: { field: keyof RegisterInput; message: string }[] = [];
+
     if (existingUsername) {
       dbErrors.push({ field: "username", message: "Username already taken." });
     }
 
-    const existingEmail = await UserRepository.findUserByEmail(data.email);
     if (existingEmail) {
       dbErrors.push({ field: "email", message: "Email already taken." });
     }
@@ -56,63 +63,96 @@ export default class AuthService {
       throw new AppError("Validation failed.", 400, dbErrors);
     }
 
-    const hashPassword = await bcrypt.hash(data.password!, 10);
+    const hashedPassword = data.password
+      ? await hashPassword(data.password)
+      : null;
+
+    if (!hashedPassword) {
+      throw new AppError("Something went wrong. Please try again.", 500);
+    }
 
     let role;
-    role = await RoleService.getRoleByName(Role.CUSTOMER);
-    if (!role) {
-      const newData = {
+    try {
+      role = await RoleService.getByName(Role.CUSTOMER);
+    } catch (error) {
+      const newRole = {
         name: Role.CUSTOMER,
         created_by: "System",
       };
-      role = await RoleService.addRole(newData);
-      if (!role) {
-        throw new AppError("Add role failed", 400);
-      }
+      role = await RoleService.addRole(newRole);
     }
 
-    const newUserData = await UserRepository.createUser({
-      ...data,
-      password: hashPassword,
-      role_id: role.id,
+    if (!role) {
+      throw new AppError("Something went wrong. Please try again.", 500);
+    }
+
+    const { user, token } = await prisma.$transaction(async (tx) => {
+      const user = await UserRepository.createUserTx(tx, {
+        ...data,
+        password: hashedPassword,
+        is_verified: false,
+        role_id: role.id,
+        auth_provider: "local",
+        image_url: env.IMAGE_DEFAULT_USER,
+      });
+
+      const expiresInMs = ms(
+        env.EMAIL_TOKEN_VERIFICATION_EXPIRES_IN as ms.StringValue
+      );
+
+      const token = await TokenRepository.createTokenTx(tx, {
+        token: signEmailVerificationToken(user.email),
+        user_id: user.id,
+        status: "ACTIVE",
+        type: "EMAIL_ACTIVATION",
+        expired_at: new Date(Date.now() + expiresInMs),
+      });
+
+      return { user, token };
     });
 
-    const token = signTokenEmailVerification(newUserData.email, "1h");
-    const one_hour = 60 * 60 * 1000;
-    const newTokenData = {
-      user_id: newUserData.id,
-      token,
-      expires_at: new Date(Date.now() + one_hour),
+    try {
+      await sendVerificationEmail(user.email, token.token, user.username);
+    } catch (error) {
+      await UserRepository.deleteById(user.id);
+      throw new AppError(
+        "Failed to send verification email. Please try again later.",
+        500
+      );
+    }
+
+    return {
+      email: user.email,
+      username: user.username,
+      created_at: user.created_at,
     };
-
-    await TokenRepository.createToken(newTokenData);
-    await sendVerificationEmail(newUserData.email, newUserData.username, token);
-
-    return newUserData;
   }
 
   static async verifyEmailAccountActivation(
-    token: string,
+    token: string | undefined,
     ip: string,
     userAgent: string
   ) {
     let payload;
 
-    if (!token) {
-      throw new AppError("Invalid token url.", 404);
+    if (!token || typeof token !== "string") {
+      throw new AppError("Token not found.", 404);
     }
 
-    const existingToken = await TokenRepository.findTokenByToken(token);
+    const existingToken = await TokenRepository.findByToken(token);
     if (!existingToken) {
       throw new AppError("Invalid Link. Please check your URL.", 400);
+    }
+    if (existingToken.type !== "EMAIL_ACTIVATION") {
+      throw new AppError("Invalid token Type.", 400);
     }
     if (existingToken.status === "USED") {
       throw new AppError("Invalid Link. Token already used.", 400);
     }
 
     const now = new Date();
-    if (existingToken.expires_at < now) {
-      await TokenRepository.markTokenExpiredByToken(token);
+    if (existingToken.expired_at < now) {
+      await TokenRepository.markStatusByToken(token, "EXPIRED");
       throw new AppError("Invalid Link, Token has expired", 400, [
         {
           field: "token_has_expired",
@@ -135,10 +175,10 @@ export default class AuthService {
     }
 
     try {
-      payload = verifyTokenEmailVerification(token);
+      payload = verifyEmailVerificationToken(token);
     } catch (innerError) {
       if (innerError instanceof TokenExpiredError) {
-        await TokenRepository.markTokenExpiredByToken(token);
+        await TokenRepository.markStatusByToken(token, "EXPIRED");
         throw new AppError("Token has expired (JWT Expired)", 400, [
           { field: "token_has_expired", message: "token_has_expired" },
         ]);
@@ -149,32 +189,47 @@ export default class AuthService {
       }
     }
 
-    const user = await UserRepository.updateIsVerifiedByEmail(payload.email);
     const deviceHash = generateDeviceHash(ip, userAgent);
 
-    const session = await SessionRepository.createOrUpdateSession({
-      user_id: user.id,
-      refresh_token: "",
-      user_agent: userAgent,
-      ip_address: ip,
-      device_hash: deviceHash,
-    });
+    const { user, accessToken, refreshToken } = await prisma.$transaction(
+      async (tx) => {
+        const user = await UserRepository.updateIsVerifiedByEmailTx(
+          tx,
+          payload.email,
+          true
+        );
 
-    const JwtPayload = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role.name,
-      tokenVersion: session.token_version,
-      sessionId: session.id,
-      deviceHash,
-    };
+        const session = await SessionRepository.createOrUpdateTx(tx, {
+          user_id: user.id,
+          refresh_token: "",
+          user_agent: userAgent,
+          ip_address: ip,
+          device_hash: deviceHash,
+        });
 
-    const refreshToken = signRefreshToken(JwtPayload, "7d");
-    const accessToken = signAccessToken(JwtPayload, "15m");
+        const JwtPayload = {
+          user_id: user.id,
+          email: user.email,
+          username: user.username,
+          role: user.role.name,
+          token_version: session.token_version,
+          session_id: session.id,
+          device_hash: deviceHash,
+        };
 
-    await SessionRepository.updateRefreshTokenById(session.id, refreshToken);
-    await TokenRepository.markTokenUsedByToken(token);
+        const accessToken = signAccessToken(JwtPayload);
+        const refreshToken = signRefreshToken(JwtPayload);
+
+        await SessionRepository.updateRefreshTokenByIdTx(
+          tx,
+          session.id,
+          refreshToken
+        );
+        await TokenRepository.markStatusByTokenTx(tx, token, "USED");
+
+        return { user, accessToken, refreshToken };
+      }
+    );
 
     return {
       user,
@@ -185,60 +240,71 @@ export default class AuthService {
 
   static async resendTokenEmailVerification(email: string) {
     if (!email || email === null) {
-      throw new AppError(
-        "Cannot read properties of undefined (reading 'email')",
-        400
-      );
-    }
-    const user = await UserRepository.findUserByEmail(email);
-    if (!user) {
-      throw new AppError("User not found.", 404);
+      throw new AppError("Email is required.", 400);
     }
 
+    const user = await UserService.getByEmail(email);
     if (user.is_verified) {
       throw new AppError("Account has been verified.", 400);
     }
 
-    const tokensUser = await TokenRepository.findTokensByUserId(user.id);
-    if (tokensUser) {
-      await TokenRepository.markAllTokensToExpiredByUserId(user.id);
+    const tokens = await TokenService.getAllTokensByUserId(user.id);
+
+    const { token } = await prisma.$transaction(async (tx) => {
+      if (tokens && tokens.length > 0) {
+        await TokenRepository.markAllTokensToExpiredByUserId(tx, user.id);
+      }
+
+      const expiresInMs = ms(
+        env.EMAIL_TOKEN_VERIFICATION_EXPIRES_IN as ms.StringValue
+      );
+
+      const token = await TokenRepository.createTokenTx(tx, {
+        token: signEmailVerificationToken(user.email),
+        user_id: user.id,
+        status: "ACTIVE",
+        type: "EMAIL_ACTIVATION",
+        expired_at: new Date(Date.now() + expiresInMs),
+      });
+
+      return { token };
+    });
+
+    try {
+      await sendVerificationEmail(user.email, token.token, user.username);
+    } catch (error) {
+      await TokenRepository.deleteById(token.id);
+      throw new AppError("Failed to send verification email.", 500);
     }
 
-    const token = signTokenEmailVerification(email);
-    const one_hour = 60 * 60 * 1000;
-    const newTokenData = {
-      user_id: user.id,
-      token,
-      expires_at: new Date(Date.now() + one_hour),
-    };
-
-    const createToken = await TokenRepository.createToken(newTokenData);
-    await sendVerificationEmail(user.email, user.username, token);
-
-    return createToken;
+    return token;
   }
 
-  static async loginUser(data: LoginProps, deviceInfo: DeviceInfoProps) {
-    const errorsValidation = loginValidation.safeParse(data);
-    if (!errorsValidation.success) {
-      const errors = validationResponses(errorsValidation);
-      throw new AppError("Validation failed.", 400, errors);
+  static async login(data: LoginInput, deviceInfo: DeviceInfo) {
+    const validation = loginValidation.safeParse(data);
+    if (!validation.success) {
+      throw new AppError(
+        "Validation failed.",
+        400,
+        validationResponses(validation)
+      );
     }
 
-    const user = await UserRepository.findUserByEmail(data.email);
+    const user = await UserRepository.findByEmail(data.email);
     if (!user) {
       throw new AppError("Email / Password incorrect.", 400);
     }
 
-    if (!user.password && user.auth_provider === "google") {
+    if (!user.password || user.auth_provider === "google") {
       throw new AppError(
         "This account is linked with Google Login. Please login using Google.",
         400
       );
     }
 
-    const isValidPassword = await bcrypt.compare(data.password, user.password!);
+    const isValidPassword = await comparePassword(data.password, user.password);
     if (!isValidPassword) {
+      await new Promise((res) => setTimeout(res, 200));
       throw new AppError("Email / Password incorrect.", 400);
     }
 
@@ -255,70 +321,90 @@ export default class AuthService {
       );
     }
 
-    const session = await SessionRepository.createOrUpdateSession({
-      user_id: user.id,
-      device_hash: deviceInfo.deviceHash,
-      refresh_token: "",
-      user_agent: deviceInfo.userAgent,
-      ip_address: deviceInfo.ip,
-    });
+    const deviceHash = await generateDeviceHash(
+      deviceInfo.ip,
+      deviceInfo.userAgent
+    );
 
-    const JwtPayload = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      role: user.role.name,
-      tokenVersion: session.token_version,
-      sessionId: session.id,
-      deviceHash: deviceInfo.deviceHash,
-    };
+    const { accessToken, refreshToken } = await prisma.$transaction(
+      async (tx) => {
+        const session = await SessionRepository.createOrUpdateTx(tx, {
+          user_id: user.id,
+          refresh_token: "",
+          user_agent: deviceInfo.userAgent,
+          ip_address: deviceInfo.ip,
+          device_hash: deviceHash,
+        });
 
-    const accessToken = signAccessToken(JwtPayload, "15m");
-    const refreshToken = signRefreshToken(JwtPayload, "7d");
+        const JwtPayload = {
+          user_id: user.id,
+          email: user.email,
+          username: user.username,
+          role: user.role.name,
+          token_version: session.token_version,
+          session_id: session.id,
+          device_hash: deviceHash,
+        };
 
-    await SessionRepository.updateRefreshTokenById(session.id, refreshToken);
+        const accessToken = signAccessToken(JwtPayload);
+        const refreshToken = signRefreshToken(JwtPayload);
+
+        await SessionRepository.updateRefreshTokenByIdTx(
+          tx,
+          session.id,
+          refreshToken
+        );
+
+        return { accessToken, refreshToken };
+      }
+    );
+
+    const { password, ...safeUser } = user;
 
     return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
+      safeUser,
       accessToken,
       refreshToken,
     };
   }
 
-  static async logoutUser(data: VerifyAccessTokenProps) {
-    if (!data || !data.id || !data.sessionId) {
+  static async logout(data: RequireAuth) {
+    if (!data || !data.user_id || !data.session_id) {
       throw new AppError("Invalid user session.", 401);
     }
 
-    const user = await UserRepository.findUserById(data.id);
-    if (!user) {
-      throw new AppError("User not found.", 404);
-    }
+    const user = await UserService.getById(data.user_id);
 
-    await SessionRepository.updateRefreshTokenById(data.sessionId, null);
-    await SessionRepository.incrementTokenVersionById(data.sessionId);
+    await prisma.$transaction(async (tx) => {
+      await SessionRepository.updateRefreshTokenByIdTx(
+        tx,
+        data.session_id,
+        null
+      );
+      await SessionRepository.incrementTokenVersionByIdTx(tx, data.session_id);
+    });
 
-    return;
+    const { password, Session, ...safeUser } = user;
+    return safeUser;
   }
 
   static async refreshToken(
-    currentUser: UserRefreshTokenProps,
+    currentUser: RequireAuth,
     currentRefreshToken: string
   ) {
-    if (!currentUser.id || !currentRefreshToken || !currentUser.sessionId) {
+    if (
+      !currentUser.user_id ||
+      !currentRefreshToken ||
+      !currentUser.session_id
+    ) {
       throw new AppError("Unauthorized access: missing user or token", 401);
     }
 
-    const user = await UserRepository.findUserById(currentUser.id);
-    if (!user) {
-      throw new AppError("user not found.", 404);
-    }
+    const user = await UserService.getById(currentUser.user_id);
 
     const userSession = user.Session.find(
       (s) =>
-        s.id === currentUser.sessionId &&
+        s.id === currentUser.session_id &&
         s.refresh_token === currentRefreshToken
     );
     if (!userSession) {
@@ -329,33 +415,30 @@ export default class AuthService {
       userSession.id
     );
 
-    const newAccessToken = signAccessToken(
-      {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        role: user.role.name,
-        tokenVersion: updateSession.token_version,
-        sessionId: updateSession.id,
-        deviceHash: userSession.device_hash,
-      },
-      "15m"
-    );
+    const newAccessToken = signAccessToken({
+      user_id: user.id,
+      email: user.email,
+      username: user.username,
+      role: user.role.name,
+      token_version: updateSession.token_version,
+      session_id: updateSession.id,
+      device_hash: updateSession.device_hash,
+    });
 
     return { newAccessToken };
   }
 
-  static async loginWithGoogle(token: string, deviceInfo: DeviceInfoProps) {
+  static async loginWithGoogle(token: string, deviceInfo: DeviceInfo) {
     const googleUser = await verifyGoogleAccessToken(token);
     if (!googleUser?.email) {
       throw new AppError("Google account has no email associated.", 400);
     }
 
     let user;
-    user = await UserRepository.findUserByEmail(googleUser.email);
+    user = await UserRepository.findByEmail(googleUser.email);
     if (!user) {
       let role;
-      role = await RoleService.getRoleByName(Role.CUSTOMER);
+      role = await RoleService.getByName(Role.CUSTOMER);
       if (!role) {
         const newData = {
           name: Role.CUSTOMER,
@@ -374,35 +457,40 @@ export default class AuthService {
         role_id: role.id,
         is_verified: true,
         auth_provider: "google",
-        image_url: googleUser.picture || null,
+        image_url: googleUser.picture || env.IMAGE_DEFAULT_USER,
         google_id: googleUser.sub,
       });
     }
 
     if (!user.is_verified) {
-      await UserRepository.updateIsVerifiedByEmail(user.email);
+      await UserRepository.updateIsVerifiedByEmail(user.email, true);
     }
 
-    const session = await SessionRepository.createOrUpdateSession({
+    const deviceHash = await generateDeviceHash(
+      deviceInfo.ip,
+      deviceInfo.userAgent
+    );
+
+    const session = await SessionRepository.createOrUpdate({
       user_id: user.id,
-      device_hash: deviceInfo.deviceHash,
+      device_hash: deviceHash,
       refresh_token: "",
       user_agent: deviceInfo.userAgent,
       ip_address: deviceInfo.ip,
     });
 
     const JwtPayload = {
-      id: user.id,
+      user_id: user.id,
       email: user.email,
       username: user.username,
       role: user.role.name,
-      tokenVersion: session.token_version,
-      sessionId: session.id,
-      deviceHash: deviceInfo.deviceHash,
+      token_version: session.token_version,
+      session_id: session.id,
+      device_hash: deviceHash,
     };
 
-    const accessToken = signAccessToken(JwtPayload, "15m");
-    const refreshToken = signRefreshToken(JwtPayload, "7d");
+    const accessToken = signAccessToken(JwtPayload);
+    const refreshToken = signRefreshToken(JwtPayload);
 
     await SessionRepository.updateRefreshTokenById(session.id, refreshToken);
 
