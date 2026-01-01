@@ -166,3 +166,59 @@ export const updateProductSizeValidation = z.object({
     .refine((val) => !isNaN(val), { message: "Stock must be a number" })
     .refine((val) => val > 0, { message: "Stock must be greater than 0" }),
 });
+
+export const updateMe = z.object({
+  username: z
+    .string()
+    .nonempty("Username is required.")
+    .min(4, "Username must be at least 4 characters.")
+    .max(20, "Username is too long, max 15 characters"),
+  fullname: z
+    .string()
+    .nonempty("Fullname is required.")
+    .min(4, "Fullname must be at least 4 characters.")
+    .max(50, "Fullname is too long, max 50 characters."),
+  phone_number: z.string().nonempty("Phone number is required."),
+});
+
+export const updateEmailMeValidation = z.object({
+  email: z
+    .string()
+    .nonempty("Email is required.")
+    .email("Invalid email format."),
+});
+
+export const setPasswordValidation = z
+  .object({
+    password: z
+      .string()
+      .nonempty("Password is required.")
+      .min(8, "Password must be at least 8 characters.")
+      .regex(/[a-z]/, "Password must include at least one lowercase letter.")
+      .regex(/[A-Z]/, "Password must include at least one uppercase letter.")
+      .regex(/\d/, "Password must include at least one number.")
+      .regex(/[\W_]/, "Password must include at least one special character."),
+    confirmPassword: z.string().nonempty("Confirm password is required."),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Confirm password do not match.",
+    path: ["confirmPassword"],
+  });
+
+export const changeMyPasswordValidation = z
+  .object({
+    oldPassword: z.string().nonempty("Old password is required."),
+    newPassword: z
+      .string()
+      .nonempty("Password is required.")
+      .min(8, "Password must be at least 8 characters.")
+      .regex(/[a-z]/, "Password must include at least one lowercase letter.")
+      .regex(/[A-Z]/, "Password must include at least one uppercase letter.")
+      .regex(/\d/, "Password must include at least one number.")
+      .regex(/[\W_]/, "Password must include at least one special character."),
+    confirmNewPassword: z.string().nonempty("Confirm password is required."),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Confirm new password do not match.",
+    path: ["confirmNewPassword"],
+  });

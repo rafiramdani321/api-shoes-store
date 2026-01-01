@@ -6,10 +6,12 @@ import routerSize from "./size.route";
 import routerRole from "./role.route";
 import routerProduct from "./product.route";
 import routerCart from "./cart.route";
+import routerUser from "./user.route";
 
 const routes = Router();
 
 routes.use("/auth", routerAuth);
+routes.use("/users", routerUser);
 routes.use("/categories", routerCategory);
 routes.use("/sub-categories", routerSubCategory);
 routes.use("/sizes", routerSize);

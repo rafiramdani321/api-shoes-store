@@ -52,6 +52,14 @@ export default class SessionRepository {
     });
   }
 
+  static async findSessionsByUserId(userId: string) {
+    return prisma.session.findMany({
+      where: {
+        user_id: userId,
+      },
+    });
+  }
+
   static async findSessionById(id: string) {
     return prisma.session.findUnique({
       where: { id },
@@ -93,6 +101,17 @@ export default class SessionRepository {
       where: { id },
       data: {
         token_version: { increment: 1 },
+      },
+    });
+  }
+
+  static async deleteAllSessionByUserIdTx(
+    tx: Prisma.TransactionClient,
+    userId: string
+  ) {
+    return tx.session.deleteMany({
+      where: {
+        user_id: userId,
       },
     });
   }

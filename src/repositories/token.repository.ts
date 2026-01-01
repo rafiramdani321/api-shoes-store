@@ -15,6 +15,18 @@ export default class TokenRepository {
     });
   }
 
+  static async createToken(data: CreateToken) {
+    return prisma.token.create({
+      data: {
+        token: data.token,
+        user_id: data.user_id,
+        status: data.status,
+        type: data.type,
+        expired_at: data.expired_at,
+      },
+    });
+  }
+
   static async findManyByUserId(user_id: string) {
     return await prisma.token.findMany({
       where: { user_id },

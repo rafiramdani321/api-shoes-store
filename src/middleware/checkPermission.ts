@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/errors";
 import UserRepository from "../repositories/user.repository";
-import { errorResponse } from "../utils/responses";
 
 export const checkPermission =
   (allowedRoles: string[]) =>

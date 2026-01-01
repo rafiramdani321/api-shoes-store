@@ -14,21 +14,23 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  username      String    @unique
-  fullname      String?
-  email         String    @unique
-  password      String?
-  role_id       String
-  image_url     String?
-  is_verified   Boolean   @default(false)
-  auth_provider String    @default("local")
-  google_id     String?   @unique
-  gender        Gender?
-  phone_number  String?
-  date_of_birth DateTime?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
+  id                String    @id @default(uuid())
+  username          String    @unique
+  fullname          String?
+  email             String    @unique
+  pending_new_email String?
+  password          String?
+  role_id           String
+  image_url         String?
+  image_file_id     String?
+  is_verified       Boolean   @default(false)
+  auth_provider     String    @default("local")
+  google_id         String?   @unique
+  gender            Gender?
+  phone_number      String?   @unique
+  date_of_birth     DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
 
   role Role @relation(fields: [role_id], references: [id], onDelete: Restrict)
 

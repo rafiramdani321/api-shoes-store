@@ -112,7 +112,8 @@ export default class AuthService {
     });
 
     try {
-      await sendVerificationEmail(user.email, token.token, user.username);
+      const url = `${env.FRONTEND_PUBLIC_BASE_URL}/auth/verify-account/${token.token}`;
+      await sendVerificationEmail(user.email, user.username, url);
     } catch (error) {
       await UserRepository.deleteById(user.id);
       throw new AppError(
@@ -271,7 +272,8 @@ export default class AuthService {
     });
 
     try {
-      await sendVerificationEmail(user.email, token.token, user.username);
+      const url = `${env.FRONTEND_PUBLIC_BASE_URL}/auth/verify-account/${token.token}`;
+      await sendVerificationEmail(user.email, user.username, url);
     } catch (error) {
       await TokenRepository.deleteById(token.id);
       throw new AppError("Failed to send verification email.", 500);
@@ -295,7 +297,7 @@ export default class AuthService {
       throw new AppError("Email / Password incorrect.", 400);
     }
 
-    if (!user.password || user.auth_provider === "google") {
+    if (!user.password) {
       throw new AppError(
         "This account is linked with Google Login. Please login using Google.",
         400

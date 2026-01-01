@@ -5,10 +5,9 @@ import { AppError } from "../utils/errors";
 
 export async function sendVerificationEmail(
   to: string,
-  token: string,
-  username: string
+  username: string,
+  url: string
 ) {
-  const url = `${process.env.FRONTEND_PUBLIC_BASE_URL}/auth/verify-account/${token}`;
   const { html, text } = generateVerificationEmail(username, url);
 
   const mailOptions = {

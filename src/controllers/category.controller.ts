@@ -8,7 +8,6 @@ import {
   deleteManyCategoryLogger,
   updateCategoryLogger,
 } from "../libs/logger/index.logger";
-import { AppError } from "../utils/errors";
 import { CategoryCreate, CategoryUpdate } from "../types/category.type";
 
 export default class CategoryController {
