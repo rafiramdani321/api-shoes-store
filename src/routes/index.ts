@@ -7,6 +7,7 @@ import routerRole from "./role.route";
 import routerProduct from "./product.route";
 import routerCart from "./cart.route";
 import routerUser from "./user.route";
+import routerShippingAddress from "./shippingAddress.route";
 
 const routes = Router();
 
@@ -18,5 +19,6 @@ routes.use("/sizes", routerSize);
 routes.use("/roles", routerRole);
 routes.use("/products", routerProduct);
 routes.use("/carts", routerCart);
+routes.use("/shipping-address", routerShippingAddress);
 
 export default routes;

@@ -163,6 +163,7 @@ export default class UserRepository {
         },
         Session: true,
         Cart: true,
+        userAddresses: true,
       },
     });
   }

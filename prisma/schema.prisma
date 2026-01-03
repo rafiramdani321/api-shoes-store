@@ -34,14 +34,37 @@ model User {
 
   role Role @relation(fields: [role_id], references: [id], onDelete: Restrict)
 
-  Session Session[]
-  Token   Token[]
-  Cart    Cart?
+  Session       Session[]
+  Token         Token[]
+  Cart          Cart?
+  userAddresses UserAddresses[]
 }
 
 enum Gender {
   MALE
   FEMALE
+}
+
+model UserAddresses {
+  id                    String  @id @default(uuid())
+  user_id               String
+  recipent_name         String
+  label_address         String
+  phone_number_recipent String
+  address               String
+  province_id           String?
+  province_name         String
+  city_id               String?
+  city_name             String
+  postal_code           String
+  is_primary            Boolean @default(false)
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
 }
 
 model Session {

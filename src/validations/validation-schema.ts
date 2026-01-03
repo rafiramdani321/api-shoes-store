@@ -222,3 +222,16 @@ export const changeMyPasswordValidation = z
     message: "Confirm new password do not match.",
     path: ["confirmNewPassword"],
   });
+
+export const createOrUpdateShippingAddressValidation = z.object({
+  recipent_name: z.string().nonempty("Recipent name is required."),
+  label_address: z.string().nonempty("Label address is required."),
+  phone_number_recipent: z
+    .string()
+    .nonempty("Phone number recipent is required."),
+  address: z.string().nonempty("Address is required."),
+  province_name: z.string().nonempty("Province name is required."),
+  city_name: z.string().nonempty("City name is required."),
+  postal_code: z.string().nonempty("Postal code is required"),
+  is_primary: z.boolean(),
+});
