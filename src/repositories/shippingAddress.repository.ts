@@ -82,6 +82,16 @@ export default class ShippingAddressRepository {
     });
   }
 
+  static async findByIdAndUserIdTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    userId: string
+  ) {
+    return tx.userAddresses.findFirst({
+      where: { id, user_id: userId },
+    });
+  }
+
   static async findAnyByUserIdTx(
     tx: Prisma.TransactionClient,
     user_id: string

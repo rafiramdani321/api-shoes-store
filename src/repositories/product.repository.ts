@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../libs/prisma";
 import {
   CreateProductImageType,
@@ -64,6 +65,7 @@ export class ProductRepository {
                   },
                 },
                 product_id: true,
+                stock: true,
               },
             },
           },
@@ -431,6 +433,23 @@ export class ProductRepository {
     });
   }
 
+  static async findByIdTx(tx: Prisma.TransactionClient, id: string) {
+    return tx.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        ProductSize: {
+          include: {
+            size: true,
+          },
+          orderBy: { updated_at: "desc" },
+        },
+        sub_category: true,
+        ProductImage: true,
+      },
+    });
+  }
+
   static async findProductsByIds(ids: string[]) {
     return prisma.product.findMany({
       where: { id: { in: ids } },
@@ -617,6 +636,41 @@ export class ProductRepository {
     return await prisma.productSize.delete({
       where: {
         id,
+      },
+    });
+  }
+
+  static async decrementStockByIdTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    quantity: number
+  ) {
+    return tx.productSize.updateMany({
+      where: {
+        id,
+        stock: {
+          gte: quantity,
+        },
+      },
+      data: {
+        stock: {
+          decrement: quantity,
+        },
+      },
+    });
+  }
+
+  static async incrementStockByIdTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    quantity: number
+  ) {
+    return tx.productSize.update({
+      where: { id },
+      data: {
+        stock: {
+          increment: quantity,
+        },
       },
     });
   }

@@ -38,6 +38,7 @@ model User {
   Token         Token[]
   Cart          Cart?
   userAddresses UserAddresses[]
+  orders        Order[]
 }
 
 enum Gender {
@@ -63,8 +64,70 @@ model UserAddresses {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+  orders     Order[]
 
   @@index([user_id])
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  user_id         String
+  user_address_id String
+  status          StatusOrder @default(PENDING_PAYMENT)
+  total_price     Int
+
+  shipping_fee  Int?
+  courier_code  String?
+  service_code  String?
+  tracking_code String?
+
+  transaction_id    String?
+  snap_token        String?
+  snap_redirect_url String?
+  payment_type      String?
+  paid_at           DateTime?
+
+  user         User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_address UserAddresses @relation(fields: [user_address_id], references: [id], onDelete: Cascade)
+  orderItems   OrderItem[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([user_id, status])
+  @@index([status])
+}
+
+enum StatusOrder {
+  PENDING_PAYMENT
+  PAID
+  PAYMENT_FAILED
+  BEING_PACKED
+  SHIPPED
+  COMPLETED
+  CANCELLED
+}
+
+model OrderItem {
+  id                String @id @default(uuid())
+  order_id          String
+  product_id        String
+  product_size_id   String
+  quantity          Int
+  unit_price        Int
+  product_title     String
+  product_image_url String
+  product_size      String
+
+  order       Order       @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  productSize ProductSize @relation(fields: [product_size_id], references: [id], onDelete: Restrict)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([order_id])
 }
 
 model Session {
@@ -191,9 +254,10 @@ model ProductSize {
   product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
   size    Size    @relation(fields: [size_id], references: [id])
 
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
+  created_at DateTime    @default(now())
+  updated_at DateTime    @updatedAt
   CartItem   CartItem[]
+  orderItems OrderItem[]
 
   @@unique([product_id, size_id])
 }
@@ -229,6 +293,7 @@ model Product {
   ProductSize  ProductSize[]
   ProductImage ProductImage[]
   CartItem     CartItem[]
+  orderItems   OrderItem[]
 }
 
 model Cart {
