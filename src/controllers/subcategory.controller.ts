@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import SubCategoriesService from "../services/subcategory.service";
-import { errorResponse, handleSuccess } from "../utils/responses";
-import { AppError } from "../utils/errors";
+import { handleSuccess } from "../utils/responses";
 import { getClientInfo } from "../utils/getClientInfo";
 import {
   SubCategoryCreate,

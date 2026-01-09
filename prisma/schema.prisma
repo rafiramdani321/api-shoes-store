@@ -69,6 +69,37 @@ model UserAddresses {
   @@index([user_id])
 }
 
+model Payment {
+  id       String @id @default(uuid())
+  order_id String
+
+  provider          String
+  transaction_id    String? @unique
+  snap_token        String?
+  snap_redirect_url String?
+
+  payment_type String?
+  status       PaymentStatus @default(PENDING)
+  amount       Int
+
+  raw_response Json?
+  paid_at      DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@index([order_id])
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
 model Order {
   id              String      @id @default(uuid())
   user_id         String
@@ -76,23 +107,15 @@ model Order {
   status          StatusOrder @default(PENDING_PAYMENT)
   total_price     Int
 
-  shipping_fee  Int?
-  courier_code  String?
-  service_code  String?
-  tracking_code String?
-
-  transaction_id    String?
-  snap_token        String?
-  snap_redirect_url String?
-  payment_type      String?
-  paid_at           DateTime?
+  paid_at DateTime?
 
   user         User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_address UserAddresses @relation(fields: [user_address_id], references: [id], onDelete: Cascade)
   orderItems   OrderItem[]
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  payments   Payment[]
 
   @@index([user_id])
   @@index([user_id, status])

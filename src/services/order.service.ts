@@ -1,10 +1,12 @@
+import { Payment, Prisma } from "@prisma/client";
 import { prisma } from "../libs/prisma";
 import { OrderRepository } from "../repositories/order.repository";
+import { PaymentRepository } from "../repositories/payment.repository";
 import { ProductRepository } from "../repositories/product.repository";
 import ShippingAddressRepository from "../repositories/shippingAddress.repository";
 import { CreateOrder } from "../types/order.type";
 import { AppError } from "../utils/errors";
-import UserService from "./user.service";
+import { MidtransService } from "./midtrans.service";
 
 export class OrderService {
   static async getAll(userId: string) {
@@ -29,21 +31,38 @@ export class OrderService {
     if (!id) {
       throw new AppError("Order id is required.", 400);
     }
-    const order = await this.getByIdAndUserId(id, userId);
+    const order =
+      await OrderRepository.findByIdAndUserIdAndStatusPaymentPending(
+        id,
+        userId
+      );
+
+    if (!order) {
+      throw new AppError("Order not found.", 404);
+    }
 
     if (order.status !== "PENDING_PAYMENT") {
       throw new AppError("Order cannot be cancelled.", 409);
     }
 
-    return prisma.$transaction(async (tx) => {
-      const result = await OrderRepository.cancelOrderByIdAndUserIdTx(
-        tx,
-        order.id,
-        userId
-      );
+    const payment = order.payments[0];
+    let midtransResult: any = null;
 
-      if (result.count === 0) {
-        throw new AppError("Order cannot be cancelled.", 409);
+    if (payment?.transaction_id) {
+      midtransResult = await MidtransService.cancelPayment(
+        payment.transaction_id
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await OrderRepository.cancelOrderByIdAndUserIdTx(tx, order.id);
+
+      if (payment) {
+        await PaymentRepository.updateStatusToFailedByIdTx(
+          tx,
+          payment.id,
+          midtransResult
+        );
       }
 
       for (const item of order.orderItems) {

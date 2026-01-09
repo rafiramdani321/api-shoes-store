@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 
 import { AppError } from "../utils/errors";
-import { errorResponse, handleSuccess } from "../utils/responses";
+import { handleSuccess } from "../utils/responses";
 import CartService from "../services/cart.service";
 
 export default class CartController {

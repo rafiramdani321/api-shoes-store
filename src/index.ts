@@ -50,7 +50,7 @@ app.listen(PORT, async () => {
     await prisma.$connect();
     console.log("✅ Database Connected");
 
-    await import("./jobs/cleanExpiredTokensJob");
+    // await import("./jobs/cleanExpiredTokensJob");
 
     console.log(`🚀 Server running at http://localhost:${PORT}`);
   } catch (error) {

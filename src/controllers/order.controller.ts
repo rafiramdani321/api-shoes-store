@@ -55,16 +55,17 @@ export class OrderController {
   }
 
   static async cancelById(req: Request, res: Response, next: NextFunction) {
-    const userId = req.user?.user_id;
-    const { id } = req.params;
     try {
+      const userId = req.user?.user_id;
+      const { orderId } = req.params;
+
       if (!userId) {
         throw new AppError("Unauthorized.", 401);
       }
 
-      const response = await OrderService.cancelByIdAndUserId(id, userId);
+      const result = await OrderService.cancelByIdAndUserId(orderId, userId);
 
-      return handleSuccess(res, "Cancel order successfully", 200, response);
+      return handleSuccess(res, "Cancel order successfully", 200, result);
     } catch (error: any) {
       next(error);
     }

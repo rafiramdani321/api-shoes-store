@@ -9,6 +9,8 @@ import routerCart from "./cart.route";
 import routerUser from "./user.route";
 import routerShippingAddress from "./shippingAddress.route";
 import routerOrder from "./order.route";
+import routerPayment from "./payment.route";
+import routerPaymentWebhook from "./payment.webhook.route";
 
 const routes = Router();
 
@@ -22,5 +24,7 @@ routes.use("/products", routerProduct);
 routes.use("/carts", routerCart);
 routes.use("/shipping-address", routerShippingAddress);
 routes.use("/orders", routerOrder);
+routes.use("/payment", routerPayment);
+routes.use("/midtrans/webhooks", routerPaymentWebhook);
 
 export default routes;

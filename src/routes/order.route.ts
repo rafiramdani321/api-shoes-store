@@ -7,6 +7,6 @@ const routerOrder = Router();
 routerOrder.get("/", requireAuth, OrderController.getAll);
 routerOrder.get("/:id", requireAuth, OrderController.getById);
 routerOrder.post("/", requireAuth, OrderController.createOrder);
-routerOrder.post("/:id/cancel", requireAuth, OrderController.cancelById);
+routerOrder.post("/:orderId/cancel", requireAuth, OrderController.cancelById);
 
 export default routerOrder;

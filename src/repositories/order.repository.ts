@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, StatusOrder } from "@prisma/client";
 import { prisma } from "../libs/prisma";
 
 export class OrderRepository {
@@ -35,6 +35,7 @@ export class OrderRepository {
       },
       include: {
         orderItems: true,
+        payments: true,
       },
     });
   }
@@ -46,24 +47,68 @@ export class OrderRepository {
         user_id: userId,
       },
       include: {
-        orderItems: true,
+        user: true,
+        orderItems: {
+          orderBy: { created_at: "desc" },
+        },
+        payments: {
+          orderBy: { created_at: "desc" },
+        },
+      },
+    });
+  }
+
+  static async findByIdAndUserIdAndStatusPaymentPending(
+    id: string,
+    userId: string
+  ) {
+    return prisma.order.findFirst({
+      where: {
+        id,
+        user_id: userId,
+        status: "PENDING_PAYMENT",
+      },
+      include: {
+        user: true,
+        payments: {
+          where: { status: "PENDING" },
+          orderBy: { created_at: "desc" },
+          take: 1,
+        },
+        orderItems: {
+          orderBy: { created_at: "desc" },
+        },
       },
     });
   }
 
   static async cancelOrderByIdAndUserIdTx(
     tx: Prisma.TransactionClient,
-    id: string,
-    userId: string
+    id: string
   ) {
-    return tx.order.updateMany({
+    return tx.order.update({
       where: {
         id,
-        user_id: userId,
-        status: "PENDING_PAYMENT",
       },
       data: {
         status: "CANCELLED",
+      },
+    });
+  }
+
+  static async updateStatusByIdTx(
+    tx: Prisma.TransactionClient,
+    data: {
+      id: string;
+      status: StatusOrder;
+      paid_at?: Date | null;
+    }
+  ) {
+    return tx.order.update({
+      where: { id: data.id },
+      data: {
+        status: data.status,
+        paid_at: data.paid_at,
       },
     });
   }

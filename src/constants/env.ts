@@ -4,6 +4,7 @@ dotenv.config();
 
 export const env = {
   PORT: process.env.PORT || 3001,
+  BACKEND_PUBLIC_URL: process.env.BACKEND_PUBLIC_URL!,
   DATABASE_URL: process.env.DATABASE_URL!,
   FRONTEND_PUBLIC_BASE_URL: process.env.FRONTEND_PUBLIC_BASE_URL!,
 
@@ -30,4 +31,9 @@ export const env = {
   JWT_REFRESH_TOKEN_EXPIRES_IN: process.env.JWT_REFRESH_TOKEN_EXPIRES_IN!,
 
   UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN!,
+
+  MIDTRANS_SERVER_KEY: process.env.MIDTRANS_SERVER_KEY!,
+  MIDTRANS_CLIENT_KEY: process.env.MIDTRANS_CLIENT_KEY!,
+  MIDTRANS_IS_PRODUCTION: process.env.MIDTRANS_IS_PRODUCTION === "true",
+  MIDTRANS_API: process.env.MIDTRANS_API!,
 };
